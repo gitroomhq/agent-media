@@ -17,13 +17,13 @@ Verify with `agent-media whoami`. If not logged in, run `agent-media login` and 
 
 | Slug | Name | Type | Notes |
 |------|------|------|-------|
-| `kling3` | Kling 3.0 Pro | Video | fal.ai, text-to-video/image-to-video, 5-10s, 1080p |
-| `veo3` | Veo 3.1 | Video | fal.ai, text-to-video/image-to-video, 4-8s, up to 4K |
-| `sora2` | Sora 2 Pro | Video | fal.ai, text-to-video/image-to-video, 4-25s, 1080p |
-| `seedance1` | Seedance 1.0 Pro | Video | fal.ai, text-to-video/image-to-video, 2-12s, 1080p |
-| `flux2-pro` | Flux 2 Pro | Image | fal.ai, text-to-image |
-| `flux2-flex` | Flux 2 Flex | Image | fal.ai, text-to-image |
-| `grok-image` | Grok Imagine | Image | fal.ai, text-to-image |
+| `kling3` | Kling 3.0 Pro | Video | text-to-video/image-to-video, 5-10s, 1080p |
+| `veo3` | Veo 3.1 | Video | text-to-video/image-to-video, 4-8s, up to 4K |
+| `sora2` | Sora 2 Pro | Video | text-to-video/image-to-video, 4-25s, 1080p |
+| `seedance1` | Seedance 1.0 Pro | Video | text-to-video/image-to-video, 2-12s, 1080p |
+| `flux2-pro` | Flux 2 Pro | Image | text-to-image |
+| `flux2-flex` | Flux 2 Flex | Image | text-to-image |
+| `grok-image` | Grok Imagine | Image | text-to-image |
 
 ## Core Commands
 
