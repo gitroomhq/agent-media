@@ -4,17 +4,17 @@ Claude Code skill for AI video and image generation via the [agent-media](https:
 
 ## What it does
 
-This skill gives Claude Code the ability to generate AI videos and images on your behalf using the `agent-media` CLI. It supports 7 models across video and image generation:
+This skill gives Claude Code the ability to generate AI videos and images on your behalf using the `agent-media` CLI. It supports 7 models across video and image generation, all powered by [fal.ai](https://fal.ai):
 
-| Model | Type | Provider |
-|-------|------|----------|
-| Seedance 2.0 | Video | ByteDance |
-| Seedance 1.5 Pro | Video | ByteDance |
-| Kling 3.0 | Video | Kuaishou |
-| Veo 3.1 | Video | Google DeepMind |
-| Flux 2 Pro | Image | Black Forest Labs |
-| Flux 2 Flex | Image | Black Forest Labs |
-| Seedream 4.5 | Image | ByteDance |
+| Model | Slug | Type | Provider |
+|-------|------|------|----------|
+| Kling 3.0 Pro | `kling3` | Video | fal.ai |
+| Veo 3.1 | `veo3` | Video | fal.ai |
+| Sora 2 Pro | `sora2` | Video | fal.ai |
+| Seedance 1.0 Pro | `seedance1` | Video | fal.ai |
+| Flux 2 Pro | `flux2-pro` | Image | fal.ai |
+| Flux 2 Flex | `flux2-flex` | Image | fal.ai |
+| Grok Imagine | `grok-image` | Image | fal.ai |
 
 ## Install
 

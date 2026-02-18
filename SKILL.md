@@ -17,13 +17,13 @@ Verify with `agent-media whoami`. If not logged in, run `agent-media login` and 
 
 | Slug | Name | Type | Notes |
 |------|------|------|-------|
-| `seedance2` | Seedance 2.0 | Video | Best motion quality, 5-10s |
-| `seedance1.5` | Seedance 1.5 Pro | Video | Fast inference, 4-12s |
-| `kling3.0` | Kling 3.0 | Video | Multi-shot, 5-10s |
-| `veo3.1` | Veo 3.1 | Video | Google DeepMind, 8s |
-| `flux2-pro` | Flux 2 Pro | Image | Professional quality |
-| `flux2-flex` | Flux 2 Flex | Image | Fast, experimental |
-| `seedream4.5` | Seedream 4.5 | Image | Photorealistic, up to 4K |
+| `kling3` | Kling 3.0 Pro | Video | fal.ai, text-to-video/image-to-video, 5-10s, 1080p |
+| `veo3` | Veo 3.1 | Video | fal.ai, text-to-video/image-to-video, 4-8s, up to 4K |
+| `sora2` | Sora 2 Pro | Video | fal.ai, text-to-video/image-to-video, 4-25s, 1080p |
+| `seedance1` | Seedance 1.0 Pro | Video | fal.ai, text-to-video/image-to-video, 2-12s, 1080p |
+| `flux2-pro` | Flux 2 Pro | Image | fal.ai, text-to-image |
+| `flux2-flex` | Flux 2 Flex | Image | fal.ai, text-to-image |
+| `grok-image` | Grok Imagine | Image | fal.ai, text-to-image |
 
 ## Core Commands
 
@@ -31,16 +31,16 @@ Verify with `agent-media whoami`. If not logged in, run `agent-media login` and 
 
 ```bash
 # Video generation
-agent-media generate seedance2 -p "A robot walking through a neon-lit city" --sync
+agent-media generate kling3 -p "A robot walking through a neon-lit city" --sync
 
 # Image generation
 agent-media generate flux2-pro -p "Cyberpunk samurai portrait" --sync
 
 # Image-to-video (provide input image)
-agent-media generate seedance2 -p "Make it dance" --input ./photo.jpg --sync
+agent-media generate seedance1 -p "Make it dance" --input ./photo.jpg --sync
 
 # With options
-agent-media generate kling3.0 -p "Ocean waves at sunset" -d 10 -r 1080p --aspect-ratio 16:9 --sync
+agent-media generate sora2 -p "Ocean waves at sunset" -d 10 -r 1080p --aspect-ratio 16:9 --sync
 ```
 
 **Flags:**
@@ -77,7 +77,7 @@ agent-media models
 
 # Detailed pricing
 agent-media pricing
-agent-media pricing --model seedance2
+agent-media pricing --model kling3
 ```
 
 ### Job management
