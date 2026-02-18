@@ -1,8 +1,8 @@
 {
-  "name": "agent-media-skill",
+  "name": "agent-media",
   "owner": {
-    "name": "agent-media contributors",
-    "email": "support@agent-media.ai"
+    "name": "Nevo David",
+    "email": "nevo@postiz.com"
   },
   "metadata": {
     "description": "AI video and image generation skill using 7 state-of-the-art models including Kling 3.0, Veo 3.1, Sora 2, Seedance 1.0, Flux 2, and Grok Imagine",
