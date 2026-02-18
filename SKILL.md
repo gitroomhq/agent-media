@@ -1,3 +1,14 @@
+---
+name: agent-media
+description: Generate AI-powered videos and images from the terminal using the `agent-media` CLI.
+homepage: https://github.com/gitroomhq/agent-media
+metadata: {"clawdbot":{"emoji":"🌎","requires":{"bins":[],"env":[]}}}
+---
+
+npm release: https://www.npmjs.com/package/agent-media-cli
+agent-media cli github: https://github.com/gitroomhq/agent-media
+official website: https://agent-media.ai
+
 # agent-media — AI Video & Image Generation
 
 Generate AI-powered videos and images from the terminal using the `agent-media` CLI.
