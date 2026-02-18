@@ -1,54 +1,22 @@
 {
-  "name": "agent-media",
-  "title": "AI Video & Image Generation",
-  "description": "Generate AI-powered videos and images directly from Claude Code using 7 state-of-the-art models including Kling 3.0, Veo 3.1, Sora 2, and Flux 2.",
-  "version": "1.0.0",
-  "author": {
+  "name": "agent-media-skill",
+  "owner": {
     "name": "agent-media contributors",
-    "url": "https://agent-media.ai"
+    "email": "support@agent-media.ai"
   },
-  "license": "Apache-2.0",
-  "repository": "https://github.com/agent-media/agent-media-skill",
-  "homepage": "https://agent-media.ai",
-  "documentation": "https://agent-media.ai/docs",
-  "categories": ["media", "ai", "video", "image-generation"],
-  "tags": ["video-generation", "image-generation", "text-to-video", "text-to-image", "image-to-video", "ai-models", "creative"],
-  "skill": {
-    "file": "SKILL.md",
-    "commands": [
-      "agent-media generate",
-      "agent-media credits",
-      "agent-media plan",
-      "agent-media status",
-      "agent-media list",
-      "agent-media models",
-      "agent-media pricing",
-      "agent-media download",
-      "agent-media retry",
-      "agent-media cancel",
-      "agent-media delete",
-      "agent-media whoami",
-      "agent-media subscribe",
-      "agent-media apikey"
-    ]
+  "metadata": {
+    "description": "AI video and image generation skill using 7 state-of-the-art models including Kling 3.0, Veo 3.1, Sora 2, Seedance 1.0, Flux 2, and Grok Imagine",
+    "version": "1.0.0"
   },
-  "models": [
-    { "slug": "kling3", "name": "Kling 3.0 Pro", "type": "video" },
-    { "slug": "veo3", "name": "Veo 3.1", "type": "video" },
-    { "slug": "sora2", "name": "Sora 2 Pro", "type": "video" },
-    { "slug": "seedance1", "name": "Seedance 1.0 Pro", "type": "video" },
-    { "slug": "flux2-pro", "name": "Flux 2 Pro", "type": "image" },
-    { "slug": "flux2-flex", "name": "Flux 2 Flex", "type": "image" },
-    { "slug": "grok-image", "name": "Grok Imagine", "type": "image" }
-  ],
-  "prerequisites": {
-    "cli": {
-      "package": "agent-media-cli",
-      "install": "npm install -g agent-media-cli"
-    },
-    "auth": {
-      "command": "agent-media login",
-      "verify": "agent-media whoami"
+  "plugins": [
+    {
+      "name": "agent-media",
+      "description": "Generate AI-powered videos and images from the terminal using the agent-media CLI — supports text-to-video, image-to-video, and text-to-image across 7 models with job management, credit tracking, and subscription billing",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
     }
-  }
+  ]
 }
