@@ -91,7 +91,7 @@ agent-media generate flux2-pro -p "Mountain landscape" --no-confirm --sync --jso
 **Flags:**
 - `-p, --prompt` — Generation prompt (required)
 - `-d, --duration` — Video duration in seconds (auto-snapped to nearest valid)
-- `-r, --resolution` — Output resolution (720p, 1080p)
+- `-r, --resolution` — Output resolution (720p, 1080p, 2K, 4K; valid values depend on model)
 - `--aspect-ratio` — Aspect ratio (16:9, 9:16, 1:1, etc.)
 - `--input` — Input image path for image-to-video
 - `--sync, -s` — Wait for completion, print the output URL

@@ -35,16 +35,16 @@ agent-media login
 ### 3. Add the skill to Claude Code
 
 ```bash
-claude mcp add-skill https://github.com/gitroomhq/agent-media
+npx add-skill gitroomhq/agent-media
 ```
 
-Or copy `SKILL.md` into your project's `.claude/skills/` directory.
+Or manually copy `SKILL.md` into your project's `.claude/skills/agent-media/` directory.
 
 ## Usage
 
 Once installed, ask Claude Code things like:
 
-- "Generate a 10 second video of a robot walking through a forest using kling3"
+- "Generate a 10-second video of a robot walking through a forest using kling3"
 - "Create an image of a cyberpunk cityscape at sunset with flux2-pro"
 - "Take this photo and turn it into a video with seedance1" (image-to-video)
 - "Show me what models are available and their pricing"
