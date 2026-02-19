@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "AI video and image generation skill using 7 state-of-the-art models including Kling 3.0, Veo 3.1, Sora 2, Seedance 1.0, Flux 2, and Grok Imagine",
-    "version": "1.0.0"
+    "version": "1.0.4"
   },
   "plugins": [
     {
