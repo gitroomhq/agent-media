@@ -97,6 +97,46 @@ agent-media ugc "Your script here..." --actor marcus --broll --sync
 agent-media ugc "Your script here..." --actor sofia --broll --broll-images https://example.com/screenshot1.png,https://example.com/screenshot2.png --sync
 ```
 
+### PIP Mode (Picture-in-Picture)
+
+PIP mode creates a full-frame talking head with rotating B-roll image overlays in the lower portion. The actor speaks to camera while relevant visuals slide in and out below. Subtitles appear just above the overlay.
+
+```bash
+# Basic PIP video — actor speaks to camera with auto-generated B-roll overlays
+agent-media ugc "Stop scrolling. If you struggle to grow on social media, consistency beats perfection every time." \
+  --actor adaeze --pip --duration 15 --style hormozi --sync
+
+# PIP with specific style
+agent-media ugc "Three things I wish I knew before starting my business..." \
+  --actor sofia --pip --duration 10 --style tiktok --sync
+```
+
+**PIP Options:**
+
+| Flag | Values | Default | Description |
+|------|--------|---------|-------------|
+| `--pip-position <pos>` | `bottom-center`, `bottom-left`, `bottom-right` | `bottom-center` | B-roll overlay position |
+| `--pip-size <size>` | `small`, `medium`, `large` | `medium` | B-roll overlay size (40%, 55%, 70% of width) |
+| `--pip-animation <anim>` | `slide-up`, `slide-left`, `slide-right`, `fade`, `scale` | `slide-up` | Overlay entrance/exit animation |
+| `--pip-style <style>` | `none`, `rounded`, `shadow` | `none` | Overlay frame style |
+
+```bash
+# PIP with bottom-right overlay, large size, slide-left animation
+agent-media ugc "Your script here..." \
+  --actor adaeze --pip --pip-position bottom-right --pip-size large --pip-animation slide-left --sync
+
+# PIP with rounded overlay and scale animation
+agent-media ugc "Your script here..." \
+  --actor sofia --pip --pip-style rounded --pip-animation scale --duration 10 --sync
+```
+
+**PIP Rules:**
+- `--actor` is **required** (PIP needs a talking head)
+- Max duration is **15 seconds** (longer videos are split into ≤10s clips with seamless continuity)
+- B-roll overlays are **auto-generated** from the script — no `--broll-images` needed
+- Script word count rules apply: 2.5 words/sec (15s = ~37 words max)
+- Do NOT combine `--pip` with `--broll` — they are separate modes
+
 ### UGC Flags
 
 | Flag | Description | Example |
@@ -113,6 +153,7 @@ agent-media ugc "Your script here..." --actor sofia --broll --broll-images https
 | `--cta <text>` | End screen call-to-action text | `--cta "Follow for more"` |
 | `--broll` | Enable B-roll cutaway scenes | `--broll` |
 | `--broll-images <urls>` | Comma-separated screenshot/image URLs for B-roll | `--broll-images url1,url2` |
+| `--pip` | PIP mode: talking head + auto-generated B-roll overlays | `--pip` |
 | `--template <slug>` | Script template (see below) | `--template saas-review` |
 | `-g, --generate-script <prompt>` | AI-generate script from description | `-g "yoga mat product"` |
 | `--product-url <url>` | Product URL for script generation context | `--product-url https://...` |
@@ -240,4 +281,6 @@ Before running ANY `agent-media ugc` command, verify:
 - [ ] `--sync` is appended
 - [ ] For SaaS reviews: `--broll --broll-images` with 1-3 screenshot URLs
 - [ ] For SaaS reviews: product name appears 2-3 times in script
+- [ ] For PIP mode: `--pip` flag is set, `--actor` is included, duration ≤ 15s
+- [ ] For PIP mode: do NOT also pass `--broll` (PIP auto-generates overlays)
 - [ ] Credits are sufficient (`agent-media credits`)
