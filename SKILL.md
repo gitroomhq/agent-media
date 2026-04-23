@@ -265,6 +265,58 @@ agent-media ugc "Here's how to schedule a post in Postiz step by step..." --sync
 | `--cta <text>` | End screen text | `--cta "Try it free"` |
 | `-s, --sync` | Wait for result (**always use**) | `--sync` |
 
+## Show Your App Videos
+
+Generate a video where an AI actor holds a phone that displays **your app screenshot** and reads your script, with Hormozi-style word-by-word subtitles burned in.
+
+**Requirements (enforced server-side):**
+1. **Vertical app screenshot** — PNG, JPEG, or WebP, height > width (phone portrait). The API rejects landscape.
+2. **Public URL** — screenshot must be reachable. Host on R2, S3, your own CDN, etc. Local files are not accepted by the CLI for this command.
+3. **Script word count** — capped at `3 words/second × duration` (≤15 words at 5s, ≤30 at 10s, ≤45 at 15s).
+
+### CLI
+
+```bash
+# Random actor (recommended — variety is key)
+agent-media show-your-app \
+  --app-screenshot https://cdn.example.com/my-app.png \
+  --script "You really need to try this app — it generates UGC videos in seconds." \
+  --duration 5 --sync
+
+# Specific actor
+agent-media show-your-app \
+  --app-screenshot https://cdn.example.com/my-app.png \
+  --script "Try this app, it changed everything for me." \
+  --actor sarah --duration 10 --sync
+```
+
+### REST API
+
+```bash
+curl -X POST https://api-v2-production-2f24.up.railway.app/v1/generate/show_your_app \
+  -H "Authorization: Bearer ma_YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "app_screenshot_url": "https://cdn.example.com/my-app.png",
+    "script": "You really need to try this app.",
+    "duration": 5
+  }'
+```
+
+### Flags
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--app-screenshot <url>` | Public URL of vertical app screenshot (**required**) | - |
+| `--script <text>` | What the actor reads (**required**, ≤3 words/sec × duration) | - |
+| `--actor <slug>` | Specific actor slug | random from pool |
+| `--duration <s>` | 5, 10, or 15 seconds | 5 |
+| `--subtitle-style <style>` | `hormozi` or `none` | hormozi |
+| `--webhook-url <url>` | HTTPS completion callback | - |
+| `-s, --sync` | Wait for completion | off |
+
+**Credit cost:** 75 flat. **Runtime:** 4–8 minutes (GPT Image + Seedance 2.0).
+
 ## Persona Management
 
 Save voice + face combos for consistent UGC across videos:
@@ -349,6 +401,7 @@ agent-media also has a REST API for programmatic access. Interactive docs at htt
 |--------|------|-------------|
 | POST | /v1/generate/ugc_video | Generate a UGC video |
 | POST | /v1/generate/product_review | Generate a product review video |
+| POST | /v1/generate/show_your_app | Actor holding phone with your app screenshot + Hormozi subs |
 | POST | /v1/generate/subtitle | Add subtitles to a video |
 | GET | /v1/actors | List available AI actors |
 | GET | /v1/videos/{jobId} | Check job status |
@@ -359,9 +412,27 @@ agent-media also has a REST API for programmatic access. Interactive docs at htt
 Authorization: Bearer ma_YOUR_API_KEY
 ```
 
-### SDKs (coming soon)
+### SDKs
 
-TypeScript and Python SDKs are in development. For now, use the REST API directly via curl or any HTTP client.
+**TypeScript** (`npm install @agentmedia/sdk`):
+
+```ts
+import { AgentMedia } from '@agentmedia/sdk';
+const client = new AgentMedia({ apiKey: 'ma_xxx' });
+
+const video = await client.createVideo({ script: '...', actor_slug: 'sofia' });
+const app   = await client.createShowYourApp({ app_screenshot_url: '...', script: '...' });
+```
+
+**Python** (`pip install agent-media`):
+
+```python
+from agent_media import AgentMedia
+client = AgentMedia(api_key="ma_xxx")
+
+video = client.create_video(script="...", actor_slug="sofia")
+app   = client.create_show_your_app(app_screenshot_url="...", script="...")
+```
 
 ### curl Example
 
@@ -381,19 +452,21 @@ curl https://api-v2-production-2f24.up.railway.app/v1/videos/{job_id} \
   -H "Authorization: Bearer ma_YOUR_KEY"
 ```
 
-### MCP Server (Claude Code / Cursor) — coming soon
+### MCP Server (Claude Code / Cursor)
 
 ```json
 {
   "mcpServers": {
     "agent-media": {
       "command": "npx",
-      "args": ["@agent-media/mcp-server"],
+      "args": ["@agentmedia/mcp-server"],
       "env": { "AGENT_MEDIA_API_KEY": "ma_xxx" }
     }
   }
 }
 ```
+
+Exposes tools: `create_video`, `show_your_app`, `list_actors`, `get_video_status`.
 
 ### OpenAPI Spec
 
