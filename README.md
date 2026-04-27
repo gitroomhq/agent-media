@@ -4,9 +4,11 @@ Claude Code skill for AI UGC video production and media generation via the [agen
 
 ## What it does
 
-This skill gives Claude Code the ability to produce complete UGC videos and SaaS review videos on your behalf using the `agent-media` CLI.
+This skill gives Claude Code the ability to produce complete UGC videos, Product Acting UGC, and SaaS review videos on your behalf using the `agent-media` CLI.
 
 **Flagship: UGC Pipeline** — Turn a script into a complete video with AI talking heads, B-roll cutaways, voiceover, animated subtitles, and background music. One command.
+
+**Product Acting UGC** — Turn a product image into a creator-style product-in-hand video with an actor, scenario template, spoken script, and synced subtitles.
 
 **SaaS Review Videos** — Provide a product name, the AI writes the script and produces a review video with an AI actor.
 
@@ -38,6 +40,7 @@ Once installed, ask Claude Code things like:
 
 - "Create a 10-second UGC video from this script using actor sofia"
 - "Make a SaaS review video for Linear with an enthusiastic angle"
+- "Create a Product Acting UGC video from this perfume image"
 - "Add hormozi-style subtitles to this video"
 - "Create a persona from my voice sample and face photo"
 - "Check my credit balance"
@@ -56,6 +59,13 @@ agent-media ugc "Your script..." --actor marcus --broll --broll-images https://e
 
 # Add subtitles to any video
 agent-media subtitle ./video.mp4 --style hormozi --sync
+
+# Product Acting UGC from a product image URL
+agent-media product-acting \
+  --product-image https://cdn.example.com/product.png \
+  --actor sofia \
+  --about "A premium perfume with a warm vanilla dry-down" \
+  --sync
 ```
 
 ## Links

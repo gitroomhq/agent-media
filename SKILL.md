@@ -11,7 +11,7 @@ official website: https://agent-media.ai
 
 # agent-media — AI UGC Video Production & Media Generation
 
-Produce complete UGC videos and SaaS review videos from the terminal using the `agent-media` CLI.
+Produce complete UGC videos, Product Acting UGC, and SaaS review videos from the terminal using the `agent-media` CLI.
 
 ---
 
@@ -265,6 +265,75 @@ agent-media ugc "Here's how to schedule a post in Postiz step by step..." --sync
 | `--cta <text>` | End screen text | `--cta "Try it free"` |
 | `-s, --sync` | Wait for result (**always use**) | `--sync` |
 
+## Product Acting UGC
+
+Generate creator-style product-in-hand UGC from a product image, actor, scenario template, and short spoken script. Use this when the user wants an actor to hold, react to, smell, present, or demonstrate a physical product.
+
+**Requirements:**
+1. **Product image URL** — must be public HTTPS, or upload a local product image first and use the returned URL.
+2. **Actor** — `--actor <slug>` is required. Run `agent-media actor list` if the user has not chosen one.
+3. **Script or product context** — provide either `--script` for exact words or `--about` so the API can generate a short script.
+4. **Word count** — script is capped at `3 words/second × duration` (≤15 words at 5s, ≤30 at 10s, ≤45 at 15s).
+
+### CLI
+
+```bash
+agent-media product-acting \
+  --product-image https://cdn.example.com/product.png \
+  --actor sofia \
+  --about "A premium perfume with a warm vanilla dry-down" \
+  --template product-in-hand \
+  --acting-style honest-review \
+  --duration 5 \
+  --sync
+
+agent-media product-acting \
+  --product-image https://cdn.example.com/product.png \
+  --actor naomi \
+  --script "I did not expect this perfume to smell this expensive." \
+  --template car-selfie \
+  --acting-style shocked \
+  --sync
+```
+
+### REST API
+
+```bash
+curl -X POST https://api-v2-production-2f24.up.railway.app/v1/generate/product_acting_ugc \
+  -H "Authorization: Bearer ma_YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "product_image_url": "https://cdn.example.com/perfume.png",
+    "actor_slug": "sarah",
+    "product_name": "Rose Noir",
+    "product_description": "Premium rose perfume with a warm vanilla dry-down.",
+    "template": "product-in-hand",
+    "acting_style": "honest-review",
+    "duration": 5,
+    "subtitle_style": "hormozi"
+  }'
+```
+
+### Flags
+
+| Flag | Values | Default | Description |
+|------|--------|---------|-------------|
+| `--product-image <url>` | HTTPS URL | - | Product image URL (**required**) |
+| `--actor <slug>` | actor slug | - | AI actor (**required**) |
+| `--actor-variant-id <id>` | UUID | - | Optional actor look/variant |
+| `--name <text>` | text | - | Product name |
+| `--about <text>` | text | - | Product description used for generated script |
+| `--script <text>` | text | generated | Exact actor line |
+| `--template <slug>` | `product-in-hand`, `mirror-selfie`, `bathroom-reaction`, `kitchen-counter`, `car-selfie`, `couch-review`, `expert-interview`, `product-closeup` | `product-in-hand` | Scenario framing |
+| `--acting-style <slug>` | `raw-selfie`, `shocked`, `angry`, `excited`, `dramatic`, `weird-hook`, `casual-demo`, `honest-review` | `raw-selfie` | Delivery energy |
+| `--visual-style <text>` | text | - | Extra pose, camera, or environment direction |
+| `--duration <s>` | `5`, `10`, `15` | `5` | Duration |
+| `--subtitles` / `--no-subtitles` | boolean | subtitles on | Burn synced subtitles |
+| `--webhook-url <url>` | HTTPS URL | - | Completion callback |
+| `-s, --sync` | boolean | off | Wait for completion |
+
+**Credit cost:** `30 × duration + 50` credits, plus `5` credits when the API generates the script. **Runtime:** usually several minutes.
+
 ## Show Your App Videos
 
 Generate a video where an AI actor holds a phone that displays **your app screenshot** and reads your script, with Hormozi-style word-by-word subtitles burned in.
@@ -363,7 +432,8 @@ Pay-as-you-go credit pack: 3,900 credits for $39 (one-time purchase, never expir
 | 5s video | 150 credits | $1.50 |
 | 10s video | 300 credits | $3.00 |
 | 15s video | 450 credits | $4.50 |
-| + AI script generation | +5 credits | +$0.05 |
+| Product Acting setup frame | +50 credits | +$0.50 |
+| AI script generation | +5 credits | +$0.05 |
 | Subtitles only | 50 credits | $0.50 |
 
 **Deduction order:** Monthly credits are used first (they expire at period end), then purchased credits (never expire).
@@ -402,6 +472,7 @@ agent-media also has a REST API for programmatic access. Interactive docs at htt
 | POST | /v1/generate/ugc_video | Generate a UGC video |
 | POST | /v1/generate/product_review | Generate a product review video |
 | POST | /v1/generate/show_your_app | Actor holding phone with your app screenshot + Hormozi subs |
+| POST | /v1/generate/product_acting_ugc | Actor presents or reacts to your product image |
 | POST | /v1/generate/subtitle | Add subtitles to a video |
 | GET | /v1/actors | List available AI actors |
 | GET | /v1/videos/{jobId} | Check job status |
@@ -422,6 +493,11 @@ const client = new AgentMedia({ apiKey: 'ma_xxx' });
 
 const video = await client.createVideo({ script: '...', actor_slug: 'sofia' });
 const app   = await client.createShowYourApp({ app_screenshot_url: '...', script: '...' });
+const product = await client.createProductActing({
+  product_image_url: 'https://cdn.example.com/product.png',
+  actor_slug: 'sofia',
+  product_description: 'Premium perfume with a warm vanilla dry-down',
+});
 ```
 
 **Python** (`pip install agent-media`):
@@ -432,6 +508,11 @@ client = AgentMedia(api_key="ma_xxx")
 
 video = client.create_video(script="...", actor_slug="sofia")
 app   = client.create_show_your_app(app_screenshot_url="...", script="...")
+product = client.create_product_acting(
+    product_image_url="https://cdn.example.com/product.png",
+    actor_slug="sofia",
+    product_description="Premium perfume with a warm vanilla dry-down",
+)
 ```
 
 ### curl Example
@@ -466,7 +547,7 @@ curl https://api-v2-production-2f24.up.railway.app/v1/videos/{job_id} \
 }
 ```
 
-Exposes tools: `create_video`, `show_your_app`, `list_actors`, `get_video_status`.
+Exposes tools: `create_video`, `show_your_app`, `product_acting_ugc`, `list_actors`, `get_video_status`.
 
 ### OpenAPI Spec
 
@@ -481,4 +562,7 @@ Before running ANY `agent-media ugc` command, verify:
 - [ ] `--sync` is appended
 - [ ] For SaaS reviews: `--broll --broll-images` with 1-3 screenshot URLs
 - [ ] For SaaS reviews: product name appears 2-3 times in script
+- [ ] For PIP mode: `--pip` flag is set, `--actor` is included, duration ≤ 15s
+- [ ] For PIP mode: do NOT also pass `--broll` (PIP auto-generates overlays)
+- [ ] For Product Acting: `--product-image`, `--actor`, and either `--script` or `--about` are included
 - [ ] Credits are sufficient (`agent-media credits`)
