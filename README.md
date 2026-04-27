@@ -29,10 +29,16 @@ agent-media login
 ### 3. Add the skill to Claude Code
 
 ```bash
-npx add-skill gitroomhq/agent-media
+npx --yes skills add gitroomhq/agent-media --agent claude-code --yes
 ```
 
 Or manually copy `SKILL.md` into your project's `.claude/skills/agent-media/` directory.
+
+To refresh both the npm CLI and Claude Code skill later:
+
+```bash
+agent-media update --force
+```
 
 ## Usage
 
