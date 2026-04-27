@@ -299,7 +299,7 @@ agent-media product-acting \
 ### REST API
 
 ```bash
-curl -X POST https://api-v2-production-2f24.up.railway.app/v1/generate/product_acting_ugc \
+curl -X POST https://api.agent-media.ai/v1/generate/product_acting_ugc \
   -H "Authorization: Bearer ma_YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -362,7 +362,7 @@ agent-media show-your-app \
 ### REST API
 
 ```bash
-curl -X POST https://api-v2-production-2f24.up.railway.app/v1/generate/show_your_app \
+curl -X POST https://api.agent-media.ai/v1/generate/show_your_app \
   -H "Authorization: Bearer ma_YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -519,7 +519,7 @@ product = client.create_product_acting(
 
 ```bash
 # Generate a video
-curl -X POST https://api-v2-production-2f24.up.railway.app/v1/generate/ugc_video \
+curl -X POST https://api.agent-media.ai/v1/generate/ugc_video \
   -H "Authorization: Bearer ma_YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -529,7 +529,7 @@ curl -X POST https://api-v2-production-2f24.up.railway.app/v1/generate/ugc_video
   }'
 
 # Check status
-curl https://api-v2-production-2f24.up.railway.app/v1/videos/{job_id} \
+curl https://api.agent-media.ai/v1/videos/{job_id} \
   -H "Authorization: Bearer ma_YOUR_KEY"
 ```
 
