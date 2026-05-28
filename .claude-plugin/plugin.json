@@ -1,0 +1,12 @@
+{
+  "name": "agent-media",
+  "description": "AI UGC video production primitives + composed skills. Generate photoreal portraits, magazine-style character sheets, lip-synced talking-head videos, and burned-in TikTok/Hormozi captions — all via one Bearer token and a single MCP server.",
+  "version": "1.0.0",
+  "author": {
+    "name": "gitroomhq",
+    "url": "https://github.com/gitroomhq"
+  },
+  "homepage": "https://agent-media.ai",
+  "repository": "https://github.com/gitroomhq/agent-media",
+  "license": "Apache-2.0"
+}
