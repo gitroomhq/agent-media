@@ -27,13 +27,18 @@ Authorization: Bearer $AGENT_MEDIA_API_KEY
 Content-Type: application/json
 Idempotency-Key: <any unique string per intent>
 
-
+{
+  "character_sheet_url": "https://pub-...r2.dev/vnext/primitive-runs/<id>/character-sheet.png",
+  "script": "walks into bedroom, picks up phone, smiles, hits record, talks to camera",
+  "n_panels": 6,
+  "aspect_ratio": "9:16"
+}
 ```
 
 ## What it costs and how long it takes
 
-- Credits: `?`
-- Wall time (typical): `?s`
+- Credits: `35`
+- Wall time (typical): `90s`
 - Deducted at submit; refunded on terminal failure.
 
 ## Polling the result
