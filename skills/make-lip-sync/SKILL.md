@@ -37,7 +37,7 @@ Idempotency-Key: <any unique string per intent>
 
 ## What it costs and how long it takes
 
-- Credits: `200`
+- Credits: `140/280/420 (5s/10s/15s)`
 - Wall time (typical): `420–480s`
 - Deducted at submit; refunded on terminal failure.
 
