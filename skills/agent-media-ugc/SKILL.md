@@ -1,7 +1,7 @@
 ---
 name: 'Agent-Media UGC Playbook'
 description: 'Playbook for orchestrating an end-to-end UGC video on the agent-media vNext runtime. Read this before deciding whether to call the one-shot make_ugc_video skill or to chain the four primitives (make_portrait → make_character_sheet → make_simple_selfie → make_subtitles) manually.'
-allowed-tools: ['mcp__agent-media__make_portrait', 'mcp__agent-media__make_character_sheet', 'mcp__agent-media__make_simple_selfie', 'mcp__agent-media__make_subtitles', 'mcp__agent-media__make_wireframe', 'mcp__agent-media__make_ugc_video']
+allowed-tools: ['mcp__agent-media__make_portrait', 'mcp__agent-media__make_character_sheet', 'mcp__agent-media__make_simple_selfie', 'mcp__agent-media__make_subtitles', 'mcp__agent-media__make_wireframe', 'mcp__agent-media__make_lip_sync', 'mcp__agent-media__make_ugc_video']
 x-skill-slug: 'agent-media-ugc'
 x-skill-version: '1.0.0'
 ---
