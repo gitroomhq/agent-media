@@ -11,7 +11,7 @@ agent-media turns a short description (or a photo) + a script into a finished, c
 
 ## 1. Connect (pick one)
 
-- **Claude Code / Cursor:** `claude /plugin install github.com/gitroomhq/agent-media` (installs the skills + MCP tools).
+- **Claude Code / Cursor:** inside a Claude Code session run `/plugin marketplace add gitroomhq/agent-media` then `/plugin install agent-media@agent-media` (installs the skills + MCP tools).
 - **Any MCP agent:** run the MCP server `npx -y -p @agentmedia/mcp-server@latest agent-media-mcp` with env `AGENT_MEDIA_API_KEY=ma_...`. All skills self-describe via `tools/list`.
 - **Plain HTTP:** call the REST API directly (below).
 
