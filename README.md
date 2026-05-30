@@ -54,7 +54,16 @@ In Claude/Cursor you just say it in words: *"Make a 10s UGC video of a friendly 
 - `make_lip_sync` (v1.0.0) — Bring your own audio: lip-sync a face (an R2-hosted image / character sheet, OR an existing clip) to a provided audio track. No text-to-speech or voice cloning — the character speaks your uploaded recording. Output is a 9:16 talking-head video.
 - `make_ugc_video` (v1.0.0) — End-to-end UGC video in one call. Provide EITHER a text description of the person, OR a portrait URL (R2-hosted), OR an uploaded image. The pipeline auto-generates the missing portrait, builds a character sheet, and produces a 5/10/15s vertical selfie video with native lip-synced audio of your script.
 
-Rules every skill follows: scripts are paced 2–4 words/sec of duration; all media URLs you pass in must be R2-hosted (the API uploads base64 images for you); each run costs credits. Reuse a character by keeping its `character_sheet_url` and feeding it to `make_simple_selfie` for each new script.
+Rules every skill follows: scripts are paced 2–4 words/sec of duration (or omit the script and pass `scene_action` for a non-speech / dancing / b-roll clip); all media URLs you pass in must be R2-hosted (the API uploads base64 images for you); each run costs credits. Reuse a character by keeping its `character_sheet_url` and feeding it to `make_simple_selfie` for each new script.
+
+## Publish to social
+
+Post a generated video to the user's TikTok / Instagram / X:
+- `POST /v1/social/connect { provider }` → returns an OAuth `url` the user opens to authorize (agents can't OAuth for them).
+- `GET /v1/social/channels` → the user's connected channels `[{ id, name, provider, profile }]`.
+- `POST /v1/social/publish { video_url, channel_ids, caption, type:"now"|"schedule", date? }` → uploads the R2 video and posts/schedules it.
+
+See `skills/publish-to-social/SKILL.md` for the full flow.
 
 ## Reference docs
 
