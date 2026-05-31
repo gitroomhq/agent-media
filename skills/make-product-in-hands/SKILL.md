@@ -1,6 +1,6 @@
 ---
 name: 'Make Product In Hands'
-description: 'Generate a 5/10/15s vertical UGC video where your character holds and shows a product in their hands. Provide a character_sheet_url (R2-hosted) and the product image (product_image_url — any https URL — OR product_image_base64; the product is re-hosted to R2 automatically). Two modes: script for a lip-synced talking-head product review (2-4 words/sec), OR scene_action for a silent demo / b-roll. Both the person and the exact product are locked from the reference images.'
+description: 'Generate a 5/10/15s vertical UGC video where your character holds, wears, and shows a product. Provide a character_sheet_url (R2-hosted) and the product image (product_image_url — any https URL — OR product_image_base64; re-hosted to R2 automatically). Two modes: script for a lip-synced talking-head product review (2-4 words/sec), OR scene_action for a silent demo / b-roll. Set subject (e.g. "a young woman") to lock the person''s gender/appearance so a gendered product can''t drift it. framing: "close_up" (chest-up, default) or "full_body" (head-to-toe, for turn-arounds / showing the whole outfit). Both the person and the exact product are locked from the reference images.'
 allowed-tools: ['mcp__agent-media__make_product_in_hands']
 x-skill-slug: 'make_product_in_hands'
 x-skill-version: '1.0.0'
@@ -9,7 +9,7 @@ x-mcp-tool: 'mcp__agent-media__make_product_in_hands'
 ---
 # Make Product In Hands
 
-Generate a 5/10/15s vertical UGC video where your character holds and shows a product in their hands. Provide a character_sheet_url (R2-hosted) and the product image (product_image_url — any https URL — OR product_image_base64; the product is re-hosted to R2 automatically). Two modes: script for a lip-synced talking-head product review (2-4 words/sec), OR scene_action for a silent demo / b-roll. Both the person and the exact product are locked from the reference images.
+Generate a 5/10/15s vertical UGC video where your character holds, wears, and shows a product. Provide a character_sheet_url (R2-hosted) and the product image (product_image_url — any https URL — OR product_image_base64; re-hosted to R2 automatically). Two modes: script for a lip-synced talking-head product review (2-4 words/sec), OR scene_action for a silent demo / b-roll. Set subject (e.g. "a young woman") to lock the person's gender/appearance so a gendered product can't drift it. framing: "close_up" (chest-up, default) or "full_body" (head-to-toe, for turn-arounds / showing the whole outfit). Both the person and the exact product are locked from the reference images.
 
 ## When to use this
 
