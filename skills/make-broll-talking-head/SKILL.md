@@ -1,6 +1,6 @@
 ---
 name: 'Make B-roll Talking Head'
-description: 'Up-to-30s vertical talking-head video with a user-supplied SQUARE b-roll video looping on the bottom half. The talking head is built from <=10s clips chained by last-frame continuity for a seamless take. Provide actor_image_url (any https image — re-hosted to R2) + broll_video_url (must already be R2-hosted) and EITHER script (Seedance voice, full 30s) OR audio_url (your own audio, single clip <=15s). Optional subtitles + overlay_size/overlay_position.'
+description: 'Up-to-30s vertical talking-head video in a top/bottom split: the actor talks in the TOP half (mouth always visible) while a user-supplied b-roll video plays in the BOTTOM half. The talking head is built from <=10s clips chained by last-frame continuity for a seamless take. Provide actor_image_url (any https image) + broll_video_url (any https video — both re-hosted to R2 automatically) and EITHER script (Seedance voice, full 30s) OR audio_url (your own audio, single clip <=15s). Optional: subtitles, and broll_width_rate (0.1-1.0, e.g. 0.8 = b-roll 80% width centered with black margins; omit for full width).'
 allowed-tools: ['mcp__agent-media__make_broll_talking_head']
 x-skill-slug: 'make_broll_talking_head'
 x-skill-version: '1.0.0'
@@ -9,7 +9,7 @@ x-mcp-tool: 'mcp__agent-media__make_broll_talking_head'
 ---
 # Make B-roll Talking Head
 
-Up-to-30s vertical talking-head video with a user-supplied SQUARE b-roll video looping on the bottom half. The talking head is built from <=10s clips chained by last-frame continuity for a seamless take. Provide actor_image_url (any https image — re-hosted to R2) + broll_video_url (must already be R2-hosted) and EITHER script (Seedance voice, full 30s) OR audio_url (your own audio, single clip <=15s). Optional subtitles + overlay_size/overlay_position.
+Up-to-30s vertical talking-head video in a top/bottom split: the actor talks in the TOP half (mouth always visible) while a user-supplied b-roll video plays in the BOTTOM half. The talking head is built from <=10s clips chained by last-frame continuity for a seamless take. Provide actor_image_url (any https image) + broll_video_url (any https video — both re-hosted to R2 automatically) and EITHER script (Seedance voice, full 30s) OR audio_url (your own audio, single clip <=15s). Optional: subtitles, and broll_width_rate (0.1-1.0, e.g. 0.8 = b-roll 80% width centered with black margins; omit for full width).
 
 ## When to use this
 
