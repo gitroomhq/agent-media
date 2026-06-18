@@ -1,15 +1,15 @@
 ---
 name: 'Make B-roll Talking Head'
-description: 'Up-to-30s vertical talking-head video in a top/bottom split: the actor talks in the TOP half (mouth always visible) while a user-supplied b-roll video plays in the BOTTOM half. The talking head is built from <=10s clips chained by last-frame continuity for a seamless take. Provide actor_image_url (any https image) + broll_video_url (any https video — both re-hosted to R2 automatically) and EITHER script (Seedance voice, full 30s) OR audio_url (your own audio, single clip <=15s). Optional: subtitles, and broll_width_rate (0.1-1.0, e.g. 0.8 = b-roll 80% width centered with black margins; omit for full width).'
+description: 'Up-to-30s vertical talking-head video: the actor speaks full-frame while a user-supplied b-roll video is overlaid on the lower half. <=15s renders as a single take (zero cuts); 16-30s uses two takes where the voice, face and setting carry across the cut automatically (take 1''s voice and final frame seed take 2) — consistent speaker and continuous scene, not a jump-cut. Provide actor_image_url (any https image) + broll_video_url (any https video — both re-hosted to R2 automatically) and EITHER script (Seedance voice) OR audio_url (your own audio, single clip <=15s). Optional: subtitles; broll_width_rate (0.1-1.0, e.g. 0.8 = b-roll 80% width centered with black margins; omit for full width); broll_start_time (seconds before the b-roll appears); broll_fade_out (dissolve the b-roll at its end).'
 allowed-tools: ['mcp__agent-media__make_broll_talking_head']
 x-skill-slug: 'make_broll_talking_head'
-x-skill-version: '1.0.0'
+x-skill-version: '1.1.0'
 x-primitive: 'composed:broll_talking_head'
 x-mcp-tool: 'mcp__agent-media__make_broll_talking_head'
 ---
 # Make B-roll Talking Head
 
-Up-to-30s vertical talking-head video in a top/bottom split: the actor talks in the TOP half (mouth always visible) while a user-supplied b-roll video plays in the BOTTOM half. The talking head is built from <=10s clips chained by last-frame continuity for a seamless take. Provide actor_image_url (any https image) + broll_video_url (any https video — both re-hosted to R2 automatically) and EITHER script (Seedance voice, full 30s) OR audio_url (your own audio, single clip <=15s). Optional: subtitles, and broll_width_rate (0.1-1.0, e.g. 0.8 = b-roll 80% width centered with black margins; omit for full width).
+Up-to-30s vertical talking-head video: the actor speaks full-frame while a user-supplied b-roll video is overlaid on the lower half. <=15s renders as a single take (zero cuts); 16-30s uses two takes where the voice, face and setting carry across the cut automatically (take 1's voice and final frame seed take 2) — consistent speaker and continuous scene, not a jump-cut. Provide actor_image_url (any https image) + broll_video_url (any https video — both re-hosted to R2 automatically) and EITHER script (Seedance voice) OR audio_url (your own audio, single clip <=15s). Optional: subtitles; broll_width_rate (0.1-1.0, e.g. 0.8 = b-roll 80% width centered with black margins; omit for full width); broll_start_time (seconds before the b-roll appears); broll_fade_out (dissolve the b-roll at its end).
 
 ## When to use this
 
