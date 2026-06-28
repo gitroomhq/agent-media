@@ -1,5 +1,5 @@
 ---
-name: 'Make UGC'
+name: 'Agent-Media UGC Video'
 description: 'The ONE tool for UGC video. Give a `script` (any length) and optionally a `person` description, an `image` (photo), or a `character` (saved char_… or sheet URL); it returns the finished captioned vertical video. Short script → one clip; long monologue → full multi-take (never trimmed); pass `broll_url` → narrated b-roll overlay. You never pick a sub-tool.'
 allowed-tools: ['mcp__agent-media__make_ugc']
 x-skill-slug: 'make_ugc'
@@ -7,7 +7,7 @@ x-skill-version: '1.0.0'
 x-primitive: 'composed:make_ugc'
 x-mcp-tool: 'mcp__agent-media__make_ugc'
 ---
-# Make UGC
+# Agent-Media UGC Video
 
 **One tool. One call. A finished, captioned, vertical UGC video.**
 

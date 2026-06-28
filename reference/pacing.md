@@ -1,6 +1,6 @@
 # Script pacing — 2 to 4 words per second
 
-Any skill that produces talking-head audio (`make_simple_selfie`, `make_ugc_video`) enforces a word-count window based on the requested duration:
+Agent-Media UGC Video (`make_ugc`) enforces a word-count window per take, based on the duration it infers from your script:
 
 | Duration | Words (min) | Words (max) |
 | -------- | ----------- | ----------- |

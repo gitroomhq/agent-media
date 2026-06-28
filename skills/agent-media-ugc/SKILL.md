@@ -1,83 +1,63 @@
 ---
 name: 'Agent-Media UGC Playbook'
-description: 'Playbook for making UGC video on agent-media. Always call the single make_ugc skill: give it a `script` (any length) and optionally a person/image/character; it returns the finished captioned vertical video. Short script → one clip, long monologue → full multi-take (never trimmed), `broll_url` → narrated overlay. You never pick a sub-skill.'
+description: 'Playbook for Agent-Media UGC Video — the one tool for UGC video on agent-media. Always call the single make_ugc skill: give it a `script` (any length) and optionally a person/image/character; it returns the finished captioned vertical video. Short script → one clip, long monologue → full multi-take (never trimmed), `broll_url` → narrated overlay. You never pick a sub-skill.'
 allowed-tools: ['mcp__agent-media__make_ugc']
 x-skill-slug: 'agent-media-ugc'
 x-skill-version: '1.1.0'
 ---
 # Agent-Media UGC Playbook
 
-You're an agent (Claude, Cursor, custom) that needs to produce a finished UGC video on the agent-media vNext runtime. This playbook gives you the three orchestration patterns and the rules of thumb for picking between them.
+You're an agent (Claude, Cursor, custom) that needs to produce a finished UGC video on agent-media. There is exactly ONE tool — `make_ugc` (Agent-Media UGC Video). You never pick a sub-skill; make_ugc resolves identity and runs the whole pipeline internally.
 
-## Pick a pattern
+## One tool, three shapes
 
-| Pattern | When to use | Calls | Total time | Total credits |
-| --- | --- | --- | --- | --- |
-| **A — One-shot composed skill** | The user gave you a person description (or a portrait URL) AND a script. You don't need to show intermediate artifacts. | 1 (`make_ugc_video`) | ~7 min | ~185–385 |
-| **B — Step-by-step primitives** | The user wants to approve each step (portrait, sheet, selfie) before moving on, OR you want different parameters at each stage. | 4 (`make_portrait` → `make_character_sheet` → `make_simple_selfie` → `make_subtitles`) | ~7–9 min | ~185–385 |
-| **C — Image-first** | The user supplied a portrait image or R2 URL — skip portrait generation. | 3 (`make_character_sheet` → `make_simple_selfie` → `make_subtitles`) | ~6–8 min | ~150–350 |
+| You want | Give make_ugc | Result |
+| --- | --- | --- |
+| A short clip | a one-line `script` (+ optional person/image/character) | one clean talking-head clip |
+| A full monologue | a long `script` (+ a real face via `image` or `character`) | a seamless multi-take video, never trimmed |
+| A narrated b-roll review | `script` + `broll_url` + a `character`/`image` | the person narrates over your footage |
 
-## Pattern A — `make_ugc_video` (recommended default)
+## How to call it
 
-Single composed call. The server runs the whole pipeline inside one Temporal workflow and returns a `skill_run_id` you poll for per-step status.
+A single call. The server picks the pipeline, the take count and the duration, runs it in one Temporal workflow, and returns a `skill_run_id` you poll.
 
 ```http
-POST https://api.agent-media.ai/v1/skills/make_ugc_video/run
+POST https://api.agent-media.ai/v1/skills/make_ugc/run
 Authorization: Bearer $AGENT_MEDIA_API_KEY
 
 {
-  "description": "a friendly young woman, soft daylight, candid framing",
-  "character_description": "Maya, 27 years old",
   "script": "Okay this is wild, I tried the new flow and it actually works.",
-  "duration": 5,
-  "subtitles": true,
-  "subtitles_style": "hormozi"
+  "person": "a friendly young woman, soft daylight, candid framing",
+  "name": "Maya, 27",
+  "captions": true
 }
 ```
 
-Poll with `GET /v1/skills/runs/<skill_run_id>` — the response surfaces per-step artifacts (portrait_url → character_sheet_url → video_url) as each primitive completes. Final video has subtitles burned in.
+Poll with `GET /v1/skills/runs/<skill_run_id>` until `status` is `succeeded`; `final_output.video_url` is your finished MP4.
 
-See [skills/make-ugc-video/SKILL.md](../make-ugc-video/SKILL.md) for the schema.
+See [skills/make-ugc/SKILL.md](../make-ugc/SKILL.md) for the full field manual.
 
 ## Step D — publish it (optional)
 
 Once you have a `video_url`, you can post it straight to the user's TikTok / Instagram / X with the **publish-to-social** skill — `POST /v1/social/publish` (CLI `agent-media social publish`, MCP `social_publish`). The user connects each network once via OAuth (`/v1/social/connect`). See [skills/publish-to-social/SKILL.md](../publish-to-social/SKILL.md).
 
-## Pattern B — chain the four primitives
+## Identity
 
-Use when the user wants tighter control (e.g. regenerate just the portrait, or pick a different character sheet description after seeing the portrait).
+- `person` — describe them in words; `image` — a photo (https URL or base64); `character` — a saved `char_…` id or `character_sheet_url` from list_characters; omit all three for a default person.
+- A full monologue or a b-roll review needs a real face — pass `image` or `character`, not just `person`.
+- Reuse a saved character: pass the same `character` on the next call — no re-generation.
 
-```
-1. POST /v1/skills/make_portrait/run            { description, realism_target }
-   → wait, get portrait_url
+## Rules
 
-2. POST /v1/skills/make_character_sheet/run     { portrait_url, description }
-   → wait, get character_sheet_url
-
-3. POST /v1/skills/make_simple_selfie/run       { character_sheet_url, script, duration }
-   → wait, get video_url
-
-4. POST /v1/skills/make_subtitles/run           { video_url, style: "hormozi" }
-   → wait, get subtitled video_url
-```
-
-Each step's `run_id` polls via `GET /v1/primitives/runs/<run_id>`. Show the user each artifact (portrait, sheet, raw video, subtitled video) and ask for approval before moving to the next step if interactivity matters.
-
-## Pattern C — image-first (user uploaded a portrait)
-
-Skip step 1 of pattern B. The user's portrait must already live on R2 — either via the agent-media frontend upload, or via the `portrait_image_base64` field on `make_character_sheet` which the API uploads for you.
-
-## Identity rules baked into every pattern
-
-- **No "selfie" in prompt vocabulary.** Seedance treats "selfie" as "subject holds a phone with both hands". The primitive prompt builder substitutes "vertical TikTok-style close-up" / "talking-head close-up" automatically. Don't fight it.
-- **Script pacing: 2–4 words per second.** 5s → 10–20 words, 10s → 20–40, 15s → 30–60. Outside this window = HTTP 400 at submit, no spend.
-- **Reference image URLs must be R2-hosted.** SSRF guard rejects everything else. Use `portrait_image_base64` on `make_character_sheet` if you only have raw bytes.
-- **Credits are deducted at submit.** Refunded automatically on terminal failure (insufficient credits, content-policy reject, etc.).
+- make_ugc paces and chunks the script for you — pass the FULL line or monologue and do NOT trim it. Length is inferred from the script.
+- Any image/video URL you pass must be a public https URL (make_ugc re-hosts it onto R2 for you) — or a `character_sheet_url` / `char_…` for a saved character.
+- Credits are deducted as each take runs and refunded on terminal failure. Portrait + character-sheet prep inside a video are FREE — you only pay for the video itself.
+- Don't put "selfie" or "phone" in a description (the model would make the person hold a phone) — say "talking to camera" instead. make_ugc already handles this internally.
 
 ## Troubleshooting
 
 - **`INSUFFICIENT_CREDITS`** — user is out. Surface the agent-media.ai billing page link.
-- **`REFERENCE_URL_NOT_ALLOWED`** — you passed a non-R2 URL. Re-upload via `portrait_image_base64` on `make_character_sheet`, or to a user gallery.
+- **`make_ugc_needs_face`** — a full monologue or a b-roll review needs `image` or `character` (a real face), not just `person`.
 - **Video has subject holding a phone** — they used a pose hint mentioning "selfie" or "phone". Strip it or set `pose: ""`.
 - **Step stuck in `submitted`** — Temporal worker may be restarting. Wait 30s and re-poll; if still stuck after 5 min, the workflow is hung — contact agent-media support with the `workflow_id`.
 

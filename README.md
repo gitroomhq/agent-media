@@ -20,28 +20,28 @@ agent-media turns a short description (or a photo) + a script into a finished, c
 
 Get a Bearer token: `npm i -g agent-media-cli && agent-media login` (stores it at `~/.agent-media/credentials.json`), or grab the `ma_*` token from the dashboard. Every call uses `Authorization: Bearer ma_...`. You need credits on the account (buy at agent-media.ai).
 
-## 3. Make a video (the one call you usually want)
+## 3. Make a video — `make_ugc` (the one tool)
 
-`make_ugc_video` runs the whole pipeline — portrait → character sheet → lip-synced talking head → captions — in a single request.
+`make_ugc` is the only generation tool: give it a `script` + a person/image/character and it returns the finished captioned video. Short script → one clip; long monologue → seamless multi-take (never trimmed); add `broll_url` → narrated overlay.
 
 ```bash
-curl -X POST https://api.agent-media.ai/v1/skills/make_ugc_video/run \
+curl -X POST https://api.agent-media.ai/v1/skills/make_ugc/run \
   -H "Authorization: Bearer ma_..." -H "Content-Type: application/json" \
-  -d '{ "description": "a friendly 28-year-old woman, soft daylight",
-        "script": "Okay, this changed my whole morning routine — you have to try it.",
-        "duration": 10, "subtitles": true }'
+  -d '{ "script": "Okay, this changed my whole morning routine — you have to try it.",
+        "person": "a friendly 28-year-old woman, soft daylight",
+        "captions": true }'
 # -> 202 { "skill_run_id": "..." }   then poll:
 curl https://api.agent-media.ai/v1/skills/runs/<skill_run_id> -H "Authorization: Bearer ma_..."
 # when status == "succeeded", final_output.video_url is your MP4.
 ```
 
-In Claude/Cursor you just say it in words: *"Make a 10s UGC video of a friendly woman saying '…' with TikTok captions."* — the agent picks the skill.
+In Claude/Cursor you just say it in words: *"Make a UGC video of a friendly woman saying '…' with TikTok captions."* — the agent calls the one tool, `make_ugc`.
 
-## 4. How to call ANY skill
+## 4. Calling it (REST / MCP / CLI)
 
-- **REST:** `POST https://api.agent-media.ai/v1/skills/<slug>/run` (Bearer auth, JSON body) → `202` with a `run_id` (or `skill_run_id` for `make_ugc_video`).
-- **Poll:** composed skill → `GET /v1/skills/runs/<skill_run_id>`; single primitive → `GET /v1/primitives/runs/<run_id>`. Output is `final_output.video_url` / `artifacts[].url`.
-- **MCP:** call the tool of the same name; arguments = the skill's input fields.
+- **REST:** `POST https://api.agent-media.ai/v1/skills/make_ugc/run` (Bearer auth, JSON body) → `202` with a `skill_run_id`.
+- **Poll:** `GET /v1/skills/runs/<skill_run_id>` → `final_output.video_url` when `status` is `succeeded`.
+- **MCP:** call the `make_ugc` tool; arguments = its input fields.
 - **Exact input schema (always current):** `GET https://api.agent-media.ai/v1/public/skills` or MCP `tools/list`. Trust that over any hand-written list.
 
 ## Skills

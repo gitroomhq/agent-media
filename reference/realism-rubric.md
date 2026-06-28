@@ -12,7 +12,7 @@ Every skill that generates an image or video automatically wraps the user's desc
     - `commercial` → clean commercial soft key light, neutral seamless backdrop, subtle catchlights, skin texture still preserved.
     - `raw_iphone` → unedited iPhone front camera selfie, raw HDR, slight handheld breathing, mild low-light grain, exposure imperfection.
 
-## Video-specific clauses (for `make_simple_selfie` / `make_ugc_video`)
+## Video-specific clauses
 
 - Framed waist-up, hands free, NOT holding a phone, looking directly into the camera.
 - The word "selfie" is deliberately avoided — Seedance treats it as a "subject holds phone with both hands" prior. Synonyms (talking-head close-up, vertical front-camera video) get the same composition without the phone.
