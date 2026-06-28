@@ -9,36 +9,77 @@ x-mcp-tool: 'mcp__agent-media__make_ugc'
 ---
 # Make UGC
 
-The ONE tool for UGC video. Give a `script` (any length) and optionally a `person` description, an `image` (photo), or a `character` (saved char_… or sheet URL); it returns the finished captioned vertical video. Short script → one clip; long monologue → full multi-take (never trimmed); pass `broll_url` → narrated b-roll overlay. You never pick a sub-tool.
+**One tool. One call. A finished, captioned, vertical UGC video.**
 
-## When to use this
+You give a `script` and (optionally) who says it — agent-media picks the pipeline, the take count, and the duration for you. You NEVER pick a sub-tool:
 
-Call this skill when the user asks for the outcome described above. It runs on the agent-media vNext primitive runtime via the `mcp__agent-media__make_ugc` MCP tool. Authentication is the user's existing agent-media Bearer token (issued by `agent-media login`).
+- **Short line** → one clean talking-head clip.
+- **Full monologue** (any length) → a seamless multi-take video, **never trimmed to fit a clip**.
+- **`broll_url`** → the person narrates over your b-roll / gameplay / product footage.
+
+## Inputs
+
+**What they say** — exactly one of:
+- `script` — the spoken line, **any length**. A sentence becomes one clip; a paragraph becomes the full multi-take video. Never trimmed.
+- `scene_action` — a silent clip instead (dancing, b-roll, vibes). Requires a `character`.
+
+**Who says it** — optional, pass at most one (omit → a default person is generated):
+- `person` — describe them in words, e.g. `"a 25-year-old woman with curly red hair"`.
+- `image` — a photo of the person: a public `https` URL **or** base64. The face is locked to it.
+- `character` — reuse a saved character: its `char_…` id (from `list_characters`) **or** its `character_sheet_url`.
+- `name` — optional name/age/vibe hint, e.g. `"Sophia, 28"`.
+
+> A **long monologue** or a **`broll_url`** review needs a real face — pass `image` or `character`, not just `person`.
+
+**Look & format** — all optional, sensible defaults:
+- `captions` (default `true`), `caption_style` (`hormozi` | `tiktok` | `minimal`)
+- `look` (`natural` | `commercial` | `raw_iphone`), `aspect_ratio` (`9:16` | `1:1`)
+- `broll_url` — an `https` video overlaid on the lower half while they narrate.
+- `duration` — leave blank; length is inferred from the script. Set only to force a short clip.
+
+## Examples
+
+A quick clip from a text description:
+```json
+{ "script": "Honestly? This app saved my whole morning routine.", "person": "a friendly young woman, soft daylight" }
+```
+
+A full monologue from a saved character — multi-take, never trimmed:
+```json
+{ "script": "Okay I have to be honest with you for a second. Three months ago I was completely overwhelmed … (the entire monologue, as long as you like) … and that is your sign.", "character": "char_8f3ac210", "captions": true }
+```
+
+From a photo of a real person:
+```json
+{ "script": "Wait — you have to see what this actually does.", "image": "https://example.com/face.jpg", "name": "Maya, 27" }
+```
+
+A narrated b-roll / gameplay review:
+```json
+{ "script": "Watch this play — this is where the whole match turns around.", "broll_url": "https://example.com/clip.mp4", "character": "char_8f3ac210" }
+```
+
+To reuse a person on the next video, pass the same `character` again — no re-generation.
 
 ## How to call it
 
-Preferred path: MCP tool `mcp__agent-media__make_ugc`. Schema is auto-published via `tools/list` against the same MCP server, so don't restate the schema here — trust the server's response.
+Preferred path: MCP tool `mcp__agent-media__make_ugc`. The full schema is auto-published via `tools/list`; the fields above are the manual.
 
 Fallback path: REST.
-
 ```http
 POST https://api.agent-media.ai/v1/skills/make_ugc/run
 Authorization: Bearer $AGENT_MEDIA_API_KEY
 Content-Type: application/json
 Idempotency-Key: <any unique string per intent>
 
-{
-  "script": "Okay I have to be honest, this completely changed how I work — I plan my whole week in ten minutes now, and I actually log off at five.",
-  "character": "char_… (from list_characters) OR a character_sheet_url — or pass `image`/`person` instead",
-  "captions": true
-}
+{ "script": "Okay this completely changed how I work — I plan my whole week in ten minutes now.", "character": "char_8f3ac210", "captions": true }
 ```
 
-## What it costs and how long it takes
+## Cost & timing
 
 - Credits: `route-dependent: ~190–505 for a short clip; priced per-take for a long monologue or b-roll review`
 - Wall time (typical): `360–1400s`
-- Deducted at submit; refunded on terminal failure.
+- Deducted as each take runs; refunded on terminal failure.
 
 ## Polling the result
 
@@ -47,13 +88,14 @@ GET https://api.agent-media.ai/v1/skills/runs/<skill_run_id>
 Authorization: Bearer $AGENT_MEDIA_API_KEY
 ```
 
-Returns per-step status with intermediate artifact URLs as each primitive completes.
+Returns per-step status; `final_output.video_url` is your finished MP4 when `status` is `succeeded`.
 
-## House rules baked into this skill
+## House rules
 
 - See [reference/realism-rubric.md](../../reference/realism-rubric.md) for the realism doctrine baked into every prompt.
+- See [reference/pacing.md](../../reference/pacing.md) — you don't manage pacing; make_ugc sizes every take to the words.
 - See [reference/auth.md](../../reference/auth.md) for first-time install and `agent-media login`.
 
 ## Source of truth
 
-This file is auto-generated by `scripts/generate-public-skill.ts` from the registry at `services/api-v2/src/skills/registry.ts`. Do not hand-edit; CI rejects drift.
+Auto-generated by `scripts/generate-public-skill.ts` from `services/api-v2/src/skills/registry.ts`. Do not hand-edit; CI rejects drift.
