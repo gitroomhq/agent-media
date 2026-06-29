@@ -28,8 +28,7 @@ Authorization: Bearer $AGENT_MEDIA_API_KEY
 {
   "script": "Okay this is wild, I tried the new flow and it actually works.",
   "person": "a friendly young woman, soft daylight, candid framing",
-  "name": "Maya, 27",
-  "captions": true
+  "name": "Maya, 27"
 }
 ```
 

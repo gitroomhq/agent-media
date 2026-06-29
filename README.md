@@ -28,8 +28,8 @@ Get a Bearer token: `npm i -g agent-media-cli && agent-media login` (stores it a
 curl -X POST https://api.agent-media.ai/v1/skills/make_ugc/run \
   -H "Authorization: Bearer ma_..." -H "Content-Type: application/json" \
   -d '{ "script": "Okay, this changed my whole morning routine — you have to try it.",
-        "person": "a friendly 28-year-old woman, soft daylight",
-        "captions": true }'
+        "person": "a friendly 28-year-old woman, soft daylight" }'
+#   (captions are opt-in — add "captions": true only if the user asked for them)
 # -> 202 { "skill_run_id": "..." }   then poll:
 curl https://api.agent-media.ai/v1/skills/runs/<skill_run_id> -H "Authorization: Bearer ma_..."
 # when status == "succeeded", final_output.video_url is your MP4.
@@ -46,9 +46,9 @@ In Claude/Cursor you just say it in words: *"Make a UGC video of a friendly woma
 
 ## Skills
 
-- `make_ugc` (v1.0.0) — The ONE tool for UGC video. Give a `script` (any length) and optionally a `person` description, an `image` (photo), or a `character` (saved char_… or sheet URL); it returns the finished captioned vertical video. Short script → one clip; long monologue → full multi-take (never trimmed); pass `broll_url` → narrated b-roll overlay. You never pick a sub-tool.
+- `make_ugc` (v1.0.0) — The ONE tool for UGC video. Give a `script` (any length) and optionally a `person` description, an `image` (photo), or a `character` (saved char_… or sheet URL); it returns the finished vertical video. Short script → one clip; long monologue → full multi-take (never trimmed); pass `broll_url` → narrated b-roll overlay. Captions are OPT-IN — ASK the user if they want them (and which style) before generating; set `captions:true` only if they say yes. You never pick a sub-tool.
 
-Rules: give `make_ugc` the full `script` (any length — it is never trimmed) or a `scene_action` for a silent clip; pass `person`, `image` (https or base64), or `character` (a `char_…` id / sheet URL) for identity, or none for a default person; `captions` defaults to true. Each run costs credits (see the cost in the skill). Reuse a saved character by passing its `character` on the next call — no re-generation. The other primitives (portrait, character sheet, lip-sync from your own audio, captioning an external video, etc.) stay available over REST/MCP for advanced use.
+Rules: give `make_ugc` the full `script` (any length — it is never trimmed) or a `scene_action` for a silent clip; pass `person`, `image` (https or base64), or `character` (a `char_…` id / sheet URL) for identity, or none for a default person; captions are OFF unless you set them — ASK the user if they want captions and which style first, never add them unprompted. Each run costs credits (see the cost in the skill). Reuse a saved character by passing its `character` on the next call — no re-generation. The other primitives (portrait, character sheet, lip-sync from your own audio, captioning an external video, etc.) stay available over REST/MCP for advanced use.
 
 ## Publish to social
 

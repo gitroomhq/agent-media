@@ -1,6 +1,6 @@
 ---
 name: 'Agent-Media UGC Video'
-description: 'The ONE tool for UGC video. Give a `script` (any length) and optionally a `person` description, an `image` (photo), or a `character` (saved char_… or sheet URL); it returns the finished captioned vertical video. Short script → one clip; long monologue → full multi-take (never trimmed); pass `broll_url` → narrated b-roll overlay. You never pick a sub-tool.'
+description: 'The ONE tool for UGC video. Give a `script` (any length) and optionally a `person` description, an `image` (photo), or a `character` (saved char_… or sheet URL); it returns the finished vertical video. Short script → one clip; long monologue → full multi-take (never trimmed); pass `broll_url` → narrated b-roll overlay. Captions are OPT-IN — ASK the user if they want them (and which style) before generating; set `captions:true` only if they say yes. You never pick a sub-tool.'
 allowed-tools: ['mcp__agent-media__make_ugc']
 x-skill-slug: 'make_ugc'
 x-skill-version: '1.0.0'
@@ -31,8 +31,10 @@ You give a `script` and (optionally) who says it — agent-media picks the pipel
 
 > A **long monologue** or a **`broll_url`** review needs a real face — pass `image` or `character`, not just `person`.
 
-**Look & format** — all optional, sensible defaults:
-- `captions` (default `true`), `caption_style` (`hormozi` | `tiktok` | `minimal`)
+**Captions are OPT-IN — do NOT add them on your own.** First ASK the user whether they want captions and which `caption_style` (`hormozi` | `tiktok` | `minimal`); set `captions:true` only if they say yes, otherwise leave it off.
+
+**Look & format** — all optional:
+- `captions` — off unless set true (ask first, above); `caption_style` (`hormozi` | `tiktok` | `minimal`)
 - `look` (`natural` | `commercial` | `raw_iphone`), `aspect_ratio` (`9:16` | `1:1`)
 - `broll_url` — an `https` video overlaid on the lower half while they narrate.
 - `duration` — leave blank; length is inferred from the script. Set only to force a short clip.
@@ -46,7 +48,7 @@ A quick clip from a text description:
 
 A full monologue from a saved character — multi-take, never trimmed:
 ```json
-{ "script": "Okay I have to be honest with you for a second. Three months ago I was completely overwhelmed … (the entire monologue, as long as you like) … and that is your sign.", "character": "char_8f3ac210", "captions": true }
+{ "script": "Okay I have to be honest with you for a second. Three months ago I was completely overwhelmed … (the entire monologue, as long as you like) … and that is your sign.", "character": "char_8f3ac210" }
 ```
 
 From a photo of a real person:
@@ -72,7 +74,7 @@ Authorization: Bearer $AGENT_MEDIA_API_KEY
 Content-Type: application/json
 Idempotency-Key: <any unique string per intent>
 
-{ "script": "Okay this completely changed how I work — I plan my whole week in ten minutes now.", "character": "char_8f3ac210", "captions": true }
+{ "script": "Okay this completely changed how I work — I plan my whole week in ten minutes now.", "character": "char_8f3ac210" }
 ```
 
 ## Cost & timing
