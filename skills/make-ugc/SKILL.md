@@ -61,7 +61,9 @@ A narrated b-roll / gameplay review:
 { "script": "Watch this play — this is where the whole match turns around.", "broll_url": "https://example.com/clip.mp4", "character": "char_8f3ac210" }
 ```
 
-To reuse a person on the next video, pass the same `character` again — no re-generation.
+## Reuse the same person across a session
+
+After a video finishes, the character is **saved** — `GET /v1/characters` lists it with a `character_id` (`char_…`) and a `character_sheet_url`. For the NEXT video in the same task, pass that as `character` instead of a new `person`: it keeps the exact same face, and it's faster + cheaper because it reuses the existing portrait + character sheet rather than re-making them (the character sheet is never skipped — it's reused). Only generate a NEW person when the user asks for a different one. **If you're not sure whether they want the same person or a new one, ASK the user before generating.**
 
 ## How to call it
 
@@ -90,7 +92,9 @@ GET https://api.agent-media.ai/v1/skills/runs/<skill_run_id>
 Authorization: Bearer $AGENT_MEDIA_API_KEY
 ```
 
-Returns per-step status; `final_output.video_url` is your finished MP4 when `status` is `succeeded`.
+Returns per-step `status` + `current_step`; `final_output.video_url` is your finished MP4 when `status` is `succeeded`.
+
+**Keep the user posted — don't go silent.** A video takes a few minutes: a new person runs portrait → character sheet → the video (→ captions if asked); reusing a saved person skips straight to the video. When you submit, tell the user the plan + a rough ETA, then poll and report each `current_step` as it changes (e.g. "building the character sheet…", "rendering the video…", "adding captions…") so they always know what's happening.
 
 ## House rules
 
