@@ -1,7 +1,7 @@
 ---
 name: 'Agent-Media UGC Playbook'
 description: 'Playbook for Agent-Media UGC Video — the one tool for UGC video on agent-media. Always call the single make_ugc skill: give it a `script` (any length) and optionally a person/image/character; it returns the finished captioned vertical video. Short script → one clip, long monologue → full multi-take (never trimmed), `broll_url` → narrated overlay. You never pick a sub-skill.'
-allowed-tools: ['mcp__agent-media__make_ugc']
+allowed-tools: ['mcp__agent-media__make_podcast', 'mcp__agent-media__make_ugc']
 x-skill-slug: 'agent-media-ugc'
 x-skill-version: '1.1.0'
 ---
