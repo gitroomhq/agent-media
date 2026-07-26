@@ -21,7 +21,7 @@ export AGENT_MEDIA_API_KEY="ma_..."
 
 - MCP server forwards it as `Authorization: Bearer ma_...` to `api.agent-media.ai`.
 - Server resolves it to a `user_id` and runs every primitive against that account.
-- Credits debit from the same account; refunds on terminal failure.
+- Credits debit from the same account.
 
 ## Rotation
 

@@ -48,7 +48,7 @@ Idempotency-Key: <any unique string per intent>
 
 - Credits: `per-take: 140/280/420 per 5s/10s/15s take, summed across every A/B turn (+15 if subtitles); the master scene + both close-ups are free`
 - Wall time (typical): `360–1400s`
-- Deducted at submit; refunded on terminal failure.
+- Deducted at submit.
 
 ## Polling the result
 

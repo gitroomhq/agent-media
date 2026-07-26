@@ -50,8 +50,8 @@ Once you have a `video_url`, you can post it straight to the user's TikTok / Ins
 
 - make_ugc paces and chunks the script for you — pass the FULL line or monologue and do NOT trim it. Length is inferred from the script.
 - Any image/video URL you pass must be a public https URL (make_ugc re-hosts it onto R2 for you) — or a `character_sheet_url` / `char_…` for a saved character.
-- Credits are deducted as each take runs and refunded on terminal failure. Portrait + character-sheet prep inside a video are FREE — you only pay for the video itself.
-- Don't put "selfie" or "phone" in a description (the model would make the person hold a phone) — say "talking to camera" instead. make_ugc already handles this internally.
+- Credits are deducted as each take runs. Portrait + character-sheet prep inside a video are FREE — you only pay for the video itself.
+- Don't put "selfie" or "phone" in a description — say "talking to camera" instead. make_ugc already handles this internally.
 
 ## Troubleshooting
 

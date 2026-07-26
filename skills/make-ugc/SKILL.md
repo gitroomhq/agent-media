@@ -83,7 +83,7 @@ Idempotency-Key: <any unique string per intent>
 
 - Credits: `route-dependent: ~190–505 for a short clip; priced per-take for a long monologue or b-roll review`
 - Wall time (typical): `360–1400s`
-- Deducted as each take runs; refunded on terminal failure.
+- Deducted as each take runs.
 
 ## Polling the result
 
