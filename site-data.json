@@ -1,0 +1,2497 @@
+{
+  "pack_version": "2.4.2",
+  "source": "https://github.com/gitroomhq/agent-media",
+  "connector": {
+    "url": "https://api.agent-media.ai/mcp",
+    "transport": "streamable-http",
+    "auth": "OAuth 2.1 with dynamic client registration (browser sign-in); `Authorization: Bearer ma_...` API keys also accepted.",
+    "clients": [
+      {
+        "id": "claude",
+        "label": "Claude.ai / Claude Desktop / Cowork",
+        "how": "Customize > Connectors > + > Add custom connector > paste the URL > Connect and sign in. Enable Agent Media in the conversation connector menu."
+      },
+      {
+        "id": "claude-code",
+        "label": "Claude Code",
+        "command": "claude mcp add --transport http --scope user agent-media https://api.agent-media.ai/mcp",
+        "note": "Available in all your projects. In Claude Code, run /mcp, select agent-media, and complete browser sign-in. If already connected, do not add a second copy."
+      },
+      {
+        "id": "chatgpt",
+        "label": "ChatGPT (web)",
+        "how": "Enable Developer mode where your account or workspace permits it. Create a custom MCP app with the connector URL and OAuth, complete sign-in, then select Agent Media in the conversation. Refresh the app tools when the catalog changes.",
+        "note": "Settings labels and availability vary by account and workspace policy. See the linked official ChatGPT setup guide below."
+      },
+      {
+        "id": "codex",
+        "label": "Codex",
+        "command": "codex mcp add agent-media --url https://api.agent-media.ai/mcp",
+        "note": "Then run codex mcp login agent-media to complete browser sign-in. Keep your normal approval settings; review requested tool actions."
+      },
+      {
+        "id": "grok",
+        "label": "Grok CLI",
+        "command": "grok mcp add --transport http agent-media https://api.agent-media.ai/mcp"
+      },
+      {
+        "id": "cursor",
+        "label": "Cursor",
+        "config": "{ \"mcpServers\": { \"agent-media\": { \"url\": \"https://api.agent-media.ai/mcp\" } } }",
+        "note": "~/.cursor/mcp.json"
+      },
+      {
+        "id": "local",
+        "label": "Any stdio client",
+        "command": "npx -y -p @agentmedia/mcp-server@latest agent-media-mcp",
+        "note": "A stdio proxy to the same hosted server; set AGENT_MEDIA_API_KEY. Do not register both the connector and the proxy in one client, or every tool appears twice."
+      }
+    ],
+    "prompt": "Set up agent-media so I can generate videos, images and voice from here.\n1. Add the MCP server: https://api.agent-media.ai/mcp (Streamable HTTP).\n2. Authenticate: complete the sign-in in the browser it opens.\n3. Call get_account and tell me whether the account is ready.\n4. Explain that you can freely combine the direct generators or use make_ugc as an optional composed shortcut.\n5. Open the existing image upload panel using open_upload_panel, or upload_image with {} if only the older tools are available. Do not generate anything yet.",
+    "polling": "Every generate tool returns a job id. Call get_run_status with wait:true; each call blocks up to about 45 seconds, a video usually needs several calls (seedance-2.0: about 3 minutes for a 5 s clip at 720p; seedance-2.5: 12 to 25 minutes per clip; plan the wait). Never report a result before get_run_status returned its URL."
+  },
+  "tools": [
+    {
+      "name": "make_ugc",
+      "title": "Make UGC Video",
+      "read_only": false,
+      "spends_credits": true,
+      "description": "Optional convenience workflow for one finished vertical UGC video from a script. Use it when the user wants the server to choose takes and timing, join a long monologue, and optionally burn captions. Use the direct generate_image, generate_video and generate_audio tools instead when the agent needs custom models, modes, shot structure, intermediate assets, or a different composition. Use `image` for a person photo, `product_image` for a product photo, or `character` for a saved character. Call `quote_ugc` with the exact same input first; it costs no credits. Ask before setting captions:true. After submission, keep calling get_run_status until it returns the finished video URL.\n\nWhen the user wants to provide a product photo, portrait, screenshot, or image reference, check tools/list. If open_upload_panel is available, offer it first: call open_upload_panel with {}, show its inline panel or returned browser link, and wait for the user to finish. Then call get_uploads with the returned session_id and use the exact ready image_url in refs, first_frame, last_frame, or the matching skill image field. Do not start a reference-dependent generation until the required images are ready. The panel accepts still PNG, JPEG, and WebP, up to 10 images and 25 MB each. Images expire 24 hours after the panel is created; show the returned expiry, request a new upload if expired, and never make a permanent copy. Uploading uses no generation credits. Do not ask the user for base64, shell commands, or a public hosting service; do not continuously poll while waiting for them. Only call these tool names when discovered. If they are missing from the connected tool catalog, call upload_image with {} to open the same panel; use the returned panel: upload_key with upload_image to retrieve images after the user finishes. If that reports the panel is unavailable, use upload_image only for an already accessible file or URL. Do not build an upload page or request a local folder as a substitute for the existing panel. Never invent access to a chat attachment: if you cannot read it, explain that and offer the panel when available. Browser fallback works without inline UI support; do not promise an inline panel in every client.\nInspect the native image previews returned with retrieved uploads before describing them or writing image-specific prompts. Never infer what the image shows from an email domain, account metadata, or filename. Use the original URLs for generation, not preview bytes. If the session ID was lost, call get_uploads with {} to list recent sessions, or upload_image with {\"upload_key\":\"panel:recent\"} for cached catalogs; retrieve the matching session before asking for re-upload. Account-wide recent uploads may belong to other conversations, so clarify ambiguous selection. Uploading stores an image; it does not attach it to a generation automatically. If the user already requested a generation with these images, continue that request using the returned URLs; do not stop at \"upload complete\" or ask again whether to use them. If make_ugc fits the requested outcome, pass a person photo as image or a product photo as product_image, then call quote_ugc before spending. Otherwise compose the direct generators: for generate_image, put the relevant image_url values in refs; for generate_video, use refs for product/person/appearance references, or first_frame for animating a still (last_frame only for an explicitly requested ending frame), and never combine refs with frame fields. Preserve the user's intended image roles and model limits; ask only if the role or selection is unclear. Include the URL in the tool arguments, not only in the prompt. Do not substitute a newly generated image for the uploaded reference. If the request was upload-only, report readiness and wait for a generation request; uploading alone does not authorize spending credits. After submitting, poll get_run_status and return the result.\n\nIMAGES: pass an https URL. If you only have raw bytes or a data: URL, call `upload_image` FIRST and pass the URL it returns. Never paste base64 into these arguments, the client prints tool arguments in the conversation, so a base64 image becomes a wall of text for the user and is re-sent on every retry.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "script": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1200,
+            "description": "What the person SAYS (lip-synced), any length. A one-liner makes one clip; a full monologue makes the full multi-take video automatically, never trimmed. Usually the only field you set. EXCEPTION: when you also pass product_image the video is a SINGLE take of at most 15s, so the script must be ~33 words or fewer."
+          },
+          "scene_action": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 400,
+            "description": "A silent action clip (dancing, b-roll, vibes), no dialogue. Use instead of script; needs a `character`."
+          },
+          "person": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 400,
+            "description": "Describe the person in words. Omit if you pass image or character."
+          },
+          "image": {
+            "type": "string",
+            "description": "A photo of the person, an https URL. The face is locked to it. If you only hold bytes, call `upload_image` first and pass the URL it returns; base64 is still accepted here but it is printed into the user’s chat and re-sent on every retry."
+          },
+          "character": {
+            "type": "string",
+            "description": "Reuse a saved character: its character_id (char_…) OR its character_sheet_url from list_characters."
+          },
+          "product_image": {
+            "type": "string",
+            "description": "A photo of a PRODUCT to show/hold/wear, an https URL. If you only hold bytes, call `upload_image` first and pass the URL it returns: base64 travels inside this tool call, is printed into the user’s chat, and is re-sent on every retry. Turns the video into a product ad; needs a `character` to hold it, and limits `script` to ONE take of at most 15s (~33 words)."
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "description": "Name/age/vibe hint, e.g. 'Sophia, 28'."
+          },
+          "broll_url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https:\\/\\/",
+            "description": "A b-roll / gameplay / product video overlaid on the lower half while the person narrates."
+          },
+          "duration": {
+            "type": "number",
+            "enum": [
+              5,
+              10,
+              15,
+              20,
+              25,
+              30
+            ],
+            "description": "IGNORED when `script` is set, length is derived from the word count (≤11 words → 5s, ≤22 → 10s, else 15s) because the renderer requires the script to fit the take. To get a shorter clip, write a shorter script. Only used for a silent `scene_action` clip, which has no words to measure."
+          },
+          "captions": {
+            "type": "boolean",
+            "description": "Burn in TikTok/Hormozi captions. OFF unless set true, ASK the user whether they want captions (and which caption_style) before generating; never add captions unprompted."
+          },
+          "caption_style": {
+            "type": "string",
+            "enum": [
+              "hormozi",
+              "tiktok",
+              "minimal"
+            ],
+            "default": "hormozi"
+          },
+          "look": {
+            "type": "string",
+            "enum": [
+              "natural",
+              "commercial",
+              "raw_iphone"
+            ],
+            "default": "natural"
+          },
+          "aspect_ratio": {
+            "type": "string",
+            "enum": [
+              "9:16",
+              "1:1"
+            ],
+            "default": "9:16"
+          },
+          "music": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "string",
+                "maxLength": 120
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "quote_ugc",
+      "title": "Quote UGC Video",
+      "read_only": true,
+      "spends_credits": false,
+      "description": "Price an optional make_ugc workflow and check the spendable balance without rendering or using credits. Pass the exact input intended for make_ugc. Show the returned price to the user and only call make_ugc after the user has authorized that spend.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "script": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1200,
+            "description": "What the person SAYS (lip-synced), any length. A one-liner makes one clip; a full monologue makes the full multi-take video automatically, never trimmed. Usually the only field you set. EXCEPTION: when you also pass product_image the video is a SINGLE take of at most 15s, so the script must be ~33 words or fewer."
+          },
+          "scene_action": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 400,
+            "description": "A silent action clip (dancing, b-roll, vibes), no dialogue. Use instead of script; needs a `character`."
+          },
+          "person": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 400,
+            "description": "Describe the person in words. Omit if you pass image or character."
+          },
+          "image": {
+            "type": "string",
+            "description": "A photo of the person, an https URL. The face is locked to it. If you only hold bytes, call `upload_image` first and pass the URL it returns; base64 is still accepted here but it is printed into the user’s chat and re-sent on every retry."
+          },
+          "character": {
+            "type": "string",
+            "description": "Reuse a saved character: its character_id (char_…) OR its character_sheet_url from list_characters."
+          },
+          "product_image": {
+            "type": "string",
+            "description": "A photo of a PRODUCT to show/hold/wear, an https URL. If you only hold bytes, call `upload_image` first and pass the URL it returns: base64 travels inside this tool call, is printed into the user’s chat, and is re-sent on every retry. Turns the video into a product ad; needs a `character` to hold it, and limits `script` to ONE take of at most 15s (~33 words)."
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "description": "Name/age/vibe hint, e.g. 'Sophia, 28'."
+          },
+          "broll_url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https:\\/\\/",
+            "description": "A b-roll / gameplay / product video overlaid on the lower half while the person narrates."
+          },
+          "duration": {
+            "type": "number",
+            "enum": [
+              5,
+              10,
+              15,
+              20,
+              25,
+              30
+            ],
+            "description": "IGNORED when `script` is set, length is derived from the word count (≤11 words → 5s, ≤22 → 10s, else 15s) because the renderer requires the script to fit the take. To get a shorter clip, write a shorter script. Only used for a silent `scene_action` clip, which has no words to measure."
+          },
+          "captions": {
+            "type": "boolean",
+            "description": "Burn in TikTok/Hormozi captions. OFF unless set true, ASK the user whether they want captions (and which caption_style) before generating; never add captions unprompted."
+          },
+          "caption_style": {
+            "type": "string",
+            "enum": [
+              "hormozi",
+              "tiktok",
+              "minimal"
+            ],
+            "default": "hormozi"
+          },
+          "look": {
+            "type": "string",
+            "enum": [
+              "natural",
+              "commercial",
+              "raw_iphone"
+            ],
+            "default": "natural"
+          },
+          "aspect_ratio": {
+            "type": "string",
+            "enum": [
+              "9:16",
+              "1:1"
+            ],
+            "default": "9:16"
+          },
+          "music": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "string",
+                "maxLength": 120
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "generate_video",
+      "title": "Generate Video",
+      "read_only": false,
+      "spends_credits": true,
+      "description": "Render a video clip from YOUR prompt on the model YOU choose, in one of three MODES that follow from the fields you pass: TEXT (prompt only), IMAGE-TO-VIDEO (`first_frame`: an https still that becomes frame one, optionally `last_frame` to end on; the clip animates the still) or REFERENCE (`refs`: https images such as a portrait, a character sheet from list_characters or a product photo whose identity/look is kept; `video_refs`: clips whose motion or framing is followed; `audio_refs`: a voice or sound to carry; address them in the prompt as @image1, @video1, @audio1). Frames and refs cannot be mixed. Write the shot like a director: who is in frame, where, what happens, camera, and the exact spoken words in quotes if anyone talks. Models: seedance-2.0, seedance-2.5 (default seedance-2.0; call list_models for each model's modes, limits, prices and recent results; or pass model:\"auto\"). Aspect: 9:16 default, also 16:9, 1:1, 4:3, 3:4, 21:9, adaptive. Quality: 480p, 720p (default), 1080p; the price per second follows the quality (seedance-2.0: 30 credits/s at 480p, 60 credits/s at 720p, 150 credits/s at 1080p). Reference clip seconds are billed like output seconds. Call `quote` first if the user cares about cost. Returns a job id, then call get_run_status until it is done and hand the user the URL.\n\nWhen the user wants to provide a product photo, portrait, screenshot, or image reference, check tools/list. If open_upload_panel is available, offer it first: call open_upload_panel with {}, show its inline panel or returned browser link, and wait for the user to finish. Then call get_uploads with the returned session_id and use the exact ready image_url in refs, first_frame, last_frame, or the matching skill image field. Do not start a reference-dependent generation until the required images are ready. The panel accepts still PNG, JPEG, and WebP, up to 10 images and 25 MB each. Images expire 24 hours after the panel is created; show the returned expiry, request a new upload if expired, and never make a permanent copy. Uploading uses no generation credits. Do not ask the user for base64, shell commands, or a public hosting service; do not continuously poll while waiting for them. Only call these tool names when discovered. If they are missing from the connected tool catalog, call upload_image with {} to open the same panel; use the returned panel: upload_key with upload_image to retrieve images after the user finishes. If that reports the panel is unavailable, use upload_image only for an already accessible file or URL. Do not build an upload page or request a local folder as a substitute for the existing panel. Never invent access to a chat attachment: if you cannot read it, explain that and offer the panel when available. Browser fallback works without inline UI support; do not promise an inline panel in every client.\nInspect the native image previews returned with retrieved uploads before describing them or writing image-specific prompts. Never infer what the image shows from an email domain, account metadata, or filename. Use the original URLs for generation, not preview bytes. If the session ID was lost, call get_uploads with {} to list recent sessions, or upload_image with {\"upload_key\":\"panel:recent\"} for cached catalogs; retrieve the matching session before asking for re-upload. Account-wide recent uploads may belong to other conversations, so clarify ambiguous selection. Uploading stores an image; it does not attach it to a generation automatically. If the user already requested a generation with these images, continue that request using the returned URLs; do not stop at \"upload complete\" or ask again whether to use them. If make_ugc fits the requested outcome, pass a person photo as image or a product photo as product_image, then call quote_ugc before spending. Otherwise compose the direct generators: for generate_image, put the relevant image_url values in refs; for generate_video, use refs for product/person/appearance references, or first_frame for animating a still (last_frame only for an explicitly requested ending frame), and never combine refs with frame fields. Preserve the user's intended image roles and model limits; ask only if the role or selection is unclear. Include the URL in the tool arguments, not only in the prompt. Do not substitute a newly generated image for the uploaded reference. If the request was upload-only, report readiness and wait for a generation request; uploading alone does not authorize spending credits. After submitting, poll get_run_status and return the result.\n\nIMAGES: pass an https URL. If you only have raw bytes or a data: URL, call `upload_image` FIRST and pass the URL it returns. Never paste base64 into these arguments, the client prints tool arguments in the conversation, so a base64 image becomes a wall of text for the user and is re-sent on every retry.\n\nRETRY SAFETY: set request_id to a fresh UUID for a new generation. Reuse the exact same request_id and inputs only to recover a lost response; that returns the original job without another charge. A deliberately new generation needs a new request_id. Keep the returned job_id and poll get_run_status. Never invent a refund.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 4000,
+            "description": "The shot, as a director would say it: who (age, look), where (setting, light), what happens, camera (phone framing), and, if anyone speaks, the exact words in quotes. About 2.3 words per second. With references, address them as @image1, @video1, @audio1."
+          },
+          "model": {
+            "type": "string",
+            "description": "A live video model id from list_models, or \"auto\" to let agent-media pick from recent results. Omit for the default. Call list_models for what each model is good for, its modes, limits and price."
+          },
+          "first_frame": {
+            "type": "string",
+            "format": "uri",
+            "description": "IMAGE-TO-VIDEO: an https image that becomes frame one of the clip (a still you want animated, a product shot, a portrait). Cannot be combined with refs, video_refs or audio_refs on Seedance."
+          },
+          "last_frame": {
+            "type": "string",
+            "format": "uri",
+            "description": "Optional with first_frame: the image the clip ends on; the model animates from first to last."
+          },
+          "refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            },
+            "maxItems": 30,
+            "description": "REFERENCE-TO-VIDEO: image references (https URLs): a portrait, a character sheet from list_characters, a product photo. The model keeps that identity/look. Address them in the prompt as @image1, @image2..."
+          },
+          "video_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            },
+            "maxItems": 10,
+            "description": "Reference clips (https mp4/mov) whose motion, framing or look the model should follow; @video1... in the prompt. Their seconds are billed like output seconds."
+          },
+          "audio_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            },
+            "maxItems": 10,
+            "description": "Reference audio (https wav/mp3): a voice or a sound the clip should carry; @audio1... in the prompt."
+          },
+          "seconds": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60,
+            "default": 5,
+            "description": "Clip length in seconds (the model sets the range; seedance 2.0: 4 to 15, seedance 2.5: 4 to 30). Credits = seconds x the per-second rate at the chosen quality."
+          },
+          "aspect": {
+            "type": "string",
+            "enum": [
+              "9:16",
+              "16:9",
+              "1:1",
+              "4:3",
+              "3:4",
+              "21:9",
+              "adaptive"
+            ],
+            "description": "9:16 (default for text and reference), 16:9, 1:1, 4:3, 3:4, 21:9, or adaptive (follows the first frame or reference; the default and the only option in image mode on seedance-2.5)."
+          },
+          "quality": {
+            "type": "string",
+            "enum": [
+              "480p",
+              "720p",
+              "1080p"
+            ],
+            "description": "480p (cheapest), 720p, 1080p (dearest). Omit for the model default: 480p on seedance-2.5, 720p on seedance-2.0. Price per second differs; see list_models."
+          },
+          "audio": {
+            "type": "boolean",
+            "default": true,
+            "description": "Render native audio (speech from the quoted words, ambience). false = silent clip."
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647,
+            "description": "Only for models whose mode lists seed support (none of the live Seedance modes). Refused elsewhere."
+          },
+          "request_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._:-]{1,128}$",
+            "description": "Unique request identity (prefer a UUID). Reuse with identical inputs to recover the same job after a lost response; choose a new identity only for an intentionally new generation."
+          }
+        },
+        "required": [
+          "prompt"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "generate_image",
+      "title": "Generate Image",
+      "read_only": false,
+      "spends_credits": true,
+      "description": "Render one image from YOUR prompt. Without refs it paints from the prompt; with refs (https URLs) it edits/composes from them, a portrait to re-light, a product to place in a hand, a character sheet to pose. Use it to build the reference a video needs (portrait first, then generate_video with that URL in refs). Models: gpt-image-2.5, gpt-image-2.5-flare, gpt-image-2 (default gpt-image-2.5). Spends credits per image (see list_models). Returns a job id, poll get_run_status for the image URL.\n\nWhen the user wants to provide a product photo, portrait, screenshot, or image reference, check tools/list. If open_upload_panel is available, offer it first: call open_upload_panel with {}, show its inline panel or returned browser link, and wait for the user to finish. Then call get_uploads with the returned session_id and use the exact ready image_url in refs, first_frame, last_frame, or the matching skill image field. Do not start a reference-dependent generation until the required images are ready. The panel accepts still PNG, JPEG, and WebP, up to 10 images and 25 MB each. Images expire 24 hours after the panel is created; show the returned expiry, request a new upload if expired, and never make a permanent copy. Uploading uses no generation credits. Do not ask the user for base64, shell commands, or a public hosting service; do not continuously poll while waiting for them. Only call these tool names when discovered. If they are missing from the connected tool catalog, call upload_image with {} to open the same panel; use the returned panel: upload_key with upload_image to retrieve images after the user finishes. If that reports the panel is unavailable, use upload_image only for an already accessible file or URL. Do not build an upload page or request a local folder as a substitute for the existing panel. Never invent access to a chat attachment: if you cannot read it, explain that and offer the panel when available. Browser fallback works without inline UI support; do not promise an inline panel in every client.\nInspect the native image previews returned with retrieved uploads before describing them or writing image-specific prompts. Never infer what the image shows from an email domain, account metadata, or filename. Use the original URLs for generation, not preview bytes. If the session ID was lost, call get_uploads with {} to list recent sessions, or upload_image with {\"upload_key\":\"panel:recent\"} for cached catalogs; retrieve the matching session before asking for re-upload. Account-wide recent uploads may belong to other conversations, so clarify ambiguous selection. Uploading stores an image; it does not attach it to a generation automatically. If the user already requested a generation with these images, continue that request using the returned URLs; do not stop at \"upload complete\" or ask again whether to use them. If make_ugc fits the requested outcome, pass a person photo as image or a product photo as product_image, then call quote_ugc before spending. Otherwise compose the direct generators: for generate_image, put the relevant image_url values in refs; for generate_video, use refs for product/person/appearance references, or first_frame for animating a still (last_frame only for an explicitly requested ending frame), and never combine refs with frame fields. Preserve the user's intended image roles and model limits; ask only if the role or selection is unclear. Include the URL in the tool arguments, not only in the prompt. Do not substitute a newly generated image for the uploaded reference. If the request was upload-only, report readiness and wait for a generation request; uploading alone does not authorize spending credits. After submitting, poll get_run_status and return the result.\n\nIMAGES: pass an https URL. If you only have raw bytes or a data: URL, call `upload_image` FIRST and pass the URL it returns. Never paste base64 into these arguments, the client prints tool arguments in the conversation, so a base64 image becomes a wall of text for the user and is re-sent on every retry.\n\nRETRY SAFETY: set request_id to a fresh UUID for a new generation. Reuse the exact same request_id and inputs only to recover a lost response; that returns the original job without another charge. A deliberately new generation needs a new request_id. Keep the returned job_id and poll get_run_status. Never invent a refund.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 4000,
+            "description": "What to paint. Be concrete: subject, age, framing, light, lens, mood, what the hands do."
+          },
+          "model": {
+            "type": "string",
+            "description": "A live image model id from list_models, or \"auto\" to let agent-media pick from recent results. Omit for the default (gpt-image-2)."
+          },
+          "refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            },
+            "maxItems": 4,
+            "description": "Reference images (https URLs, up to 4). With refs the model EDITS/composes from them (a product into a hand, a portrait re-lit); without, it paints from the prompt alone."
+          },
+          "size": {
+            "type": "string",
+            "enum": [
+              "1024x1024",
+              "1024x1536",
+              "1536x1024"
+            ],
+            "default": "1024x1536",
+            "description": "1024x1536 portrait (default, for 9:16 video), 1024x1024 square, 1536x1024 landscape."
+          },
+          "request_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._:-]{1,128}$",
+            "description": "Unique request identity (prefer a UUID). Reuse with identical inputs to recover the same job after a lost response; choose a new identity only for an intentionally new generation."
+          }
+        },
+        "required": [
+          "prompt"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "generate_audio",
+      "title": "Generate Audio",
+      "read_only": false,
+      "spends_credits": true,
+      "description": "Speak text in a named voice (jessica, sarah, liam, chris, lily, bill, matilda, or a raw ElevenLabs voice id). Emotion tags like [excited] or [whispers] are honoured. For a talking-head clip you usually do NOT need this: generate_video renders native speech when the words are in the prompt. Use it for voiceover over b-roll or a standalone audio file. Models: elevenlabs-tts. Spends 1 credit per 100 characters, rounded up. Returns a job id, poll get_run_status for the mp3 URL. The mp3 URL can be passed as an audio_ref to generate_video.\n\nRETRY SAFETY: set request_id to a fresh UUID for a new generation. Reuse the exact same request_id and inputs only to recover a lost response; that returns the original job without another charge. A deliberately new generation needs a new request_id. Keep the returned job_id and poll get_run_status. Never invent a refund.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "The words to speak. Emotion tags like [excited] or [whispers] are honoured. Priced per character; see list_models."
+          },
+          "model": {
+            "type": "string",
+            "description": "A live audio model id from list_models, or \"auto\". Omit for the default (elevenlabs-tts)."
+          },
+          "voice": {
+            "type": "string",
+            "minLength": 1,
+            "default": "sarah",
+            "description": "A voice name: jessica (young female), sarah (female), liam (young male), chris (male), lily (elder female), bill (elder male), matilda (warm), or a raw ElevenLabs voice id."
+          },
+          "tone": {
+            "type": "string",
+            "enum": [
+              "energetic",
+              "calm",
+              "confident",
+              "dramatic"
+            ],
+            "description": "energetic | calm | confident | dramatic."
+          },
+          "request_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._:-]{1,128}$",
+            "description": "Unique request identity (prefer a UUID). Reuse with identical inputs to recover the same job after a lost response; choose a new identity only for an intentionally new generation."
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "quote",
+      "title": "Quote",
+      "read_only": true,
+      "spends_credits": false,
+      "description": "Price a generate_image / generate_video / generate_audio call WITHOUT running it. Pass the same `input` you would pass to the tool. Returns credits (1 credit = $0.01), the model that would run, and the breakdown. Costs nothing. Use it before spending when the user asked about cost, when choosing between models, or before a clip longer than a few seconds.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "image",
+              "video",
+              "audio"
+            ]
+          },
+          "input": {
+            "type": "object",
+            "description": "The exact arguments you would pass to generate_<kind>."
+          }
+        },
+        "required": [
+          "kind",
+          "input"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "list_characters",
+      "title": "List Characters",
+      "read_only": true,
+      "spends_credits": false,
+      "description": "List the authenticated user's saved, reusable characters. Each has a character_id (char_…) and a character_sheet_url. Pass either one as make_ugc's `character`, or pass the sheet/portrait URL in `refs` of the advanced generate_video / generate_image tools. Plus a portrait/thumbnail URL for display.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Max characters to return (default 50)."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "get_run_status",
+      "title": "Get Run Status",
+      "read_only": true,
+      "spends_credits": false,
+      "description": "Check a generation you already submitted, and get its output URL (video, image or audio) when it is done. Pass the id ANY agent-media tool returned (run id, skill run id, or job id), this resolves all of them. Set wait:true to block until the job reaches a terminal state (up to ~45 seconds per call; if it is still running, just call again: seedance-2.0 needs about 3 minutes for a 5 s clip, seedance-2.5 12 to 25 minutes, so keep calling until it is done). ALWAYS call this after submitting: without it you cannot tell whether the video succeeded, and cannot give the user a link.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "description": "The run_id / skill_run_id / job_id returned when you submitted."
+          },
+          "wait": {
+            "type": "boolean",
+            "description": "Block until the run finishes or ~45 seconds elapse (default false). A video needs several such calls; just call again."
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "upload_image",
+      "title": "Upload Image",
+      "read_only": false,
+      "spends_credits": false,
+      "description": "When the user wants to provide a product photo, portrait, screenshot, or image reference, check tools/list. If open_upload_panel is available, offer it first: call open_upload_panel with {}, show its inline panel or returned browser link, and wait for the user to finish. Then call get_uploads with the returned session_id and use the exact ready image_url in refs, first_frame, last_frame, or the matching skill image field. Do not start a reference-dependent generation until the required images are ready. The panel accepts still PNG, JPEG, and WebP, up to 10 images and 25 MB each. Images expire 24 hours after the panel is created; show the returned expiry, request a new upload if expired, and never make a permanent copy. Uploading uses no generation credits. Do not ask the user for base64, shell commands, or a public hosting service; do not continuously poll while waiting for them. Only call these tool names when discovered. If they are missing from the connected tool catalog, call upload_image with {} to open the same panel; use the returned panel: upload_key with upload_image to retrieve images after the user finishes. If that reports the panel is unavailable, use upload_image only for an already accessible file or URL. Do not build an upload page or request a local folder as a substitute for the existing panel. Never invent access to a chat attachment: if you cannot read it, explain that and offer the panel when available. Browser fallback works without inline UI support; do not promise an inline panel in every client.\nInspect the native image previews returned with retrieved uploads before describing them or writing image-specific prompts. Never infer what the image shows from an email domain, account metadata, or filename. Use the original URLs for generation, not preview bytes. If the session ID was lost, call get_uploads with {} to list recent sessions, or upload_image with {\"upload_key\":\"panel:recent\"} for cached catalogs; retrieve the matching session before asking for re-upload. Account-wide recent uploads may belong to other conversations, so clarify ambiguous selection. Uploading stores an image; it does not attach it to a generation automatically. If the user already requested a generation with these images, continue that request using the returned URLs; do not stop at \"upload complete\" or ask again whether to use them. If make_ugc fits the requested outcome, pass a person photo as image or a product photo as product_image, then call quote_ugc before spending. Otherwise compose the direct generators: for generate_image, put the relevant image_url values in refs; for generate_video, use refs for product/person/appearance references, or first_frame for animating a still (last_frame only for an explicitly requested ending frame), and never combine refs with frame fields. Preserve the user's intended image roles and model limits; ask only if the role or selection is unclear. Include the URL in the tool arguments, not only in the prompt. Do not substitute a newly generated image for the uploaded reference. If the request was upload-only, report readiness and wait for a generation request; uploading alone does not authorize spending credits. After submitting, poll get_run_status and return the result.\n\nFor an image already accessible to you: Store an image and get back a stable https URL you can pass to any agent-media tool. Costs NO credits. THREE ways in, in this order:\n1. FILE ON DISK (when the file is already accessible to your shell): call upload_image with `file_bytes` set to the exact byte size of the file (`wc -c < photo.png`) and `file_name`. You get back a `put_url`; run the printed curl to stream the file straight to storage, then call upload_image again with the `upload_key` you were given to get the URL. The bytes never pass through this conversation, so there is NO reason to resize, crop or re-encode the user’s photo first. Do not: a downscaled product photo is what the video model will show. Up to 25 MB.\n2. A URL you already have: pass `image_url` to re-host it.\n3. Raw bytes with no shell available: pass `image_base64` (PNG or JPEG, 10 MB max after decoding). Only when 1 and 2 are impossible, and even then upload the original, never a shrunken copy.\nThen pass the returned URL everywhere. Do NOT paste base64 into other tool arguments or into the conversation: the client displays tool arguments to the user, so a base64 image becomes a wall of unreadable text, and every retry re-sends it.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "file_bytes": {
+            "type": "integer",
+            "description": "Step 1 of the file path: the exact size of the file in bytes (`wc -c < photo.png`). Returns a put_url and an upload_key. Full resolution, up to 25 MB."
+          },
+          "file_name": {
+            "type": "string",
+            "description": "Optional with file_bytes: the file name, so the content type is right (.png or .jpg)."
+          },
+          "upload_key": {
+            "type": "string",
+            "description": "Reuse the exact upload_key returned earlier: a panel: key retrieves all ready temporary images; a file upload key confirms the completed PUT and returns its image_url."
+          },
+          "image_base64": {
+            "type": "string",
+            "description": "The image bytes, base64-encoded. A `data:image/png;base64,...` prefix is accepted and stripped. Last resort: use file_bytes when you can run a shell."
+          },
+          "image_url": {
+            "type": "string",
+            "description": "An https URL to fetch and re-host instead."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "list_models",
+      "title": "List Models",
+      "read_only": true,
+      "spends_credits": false,
+      "description": "List the generation models agent-media can use: for each, its MODES (video: text, image-to-video via first_frame, reference via refs / video_refs / audio_refs) with the exact inputs, limits, aspects, qualities and credits per second of every mode, a \"pick when\" line, prompting tips, expected latency, how to select it, plus `recent`: the last 30 days of real runs per model (fail rate, auto-judge score, user ratings, median render time). Read this BEFORE choosing a model or a mode for generate_video / generate_image / generate_audio: the default seedance-2.0 is right for most jobs. Pass the id as `model`, or `model:\"auto\"` and the printed policy picks from the stats. Costs NO credits. Includes the same authenticated balance check as get_account; compare it with quote before generation. Set include_candidates:true to also see planned models that cannot be selected yet.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "include_candidates": {
+            "type": "boolean",
+            "description": "Also return planned models (no price, not selectable). Default false."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "get_account",
+      "title": "Check Account Readiness",
+      "read_only": true,
+      "spends_credits": false,
+      "description": "Check this authenticated connection, available generation credits, and whether generation/upload services are configured. Free and read-only: does not create an upload session, generate media, refill credits or change billing. Call before the first generation; then use quote_ugc for make_ugc or quote for a direct generator and compare the cost with the balance. A positive balance is not a guarantee of sufficient funds for a specific request or provider availability.",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "rate_run",
+      "title": "Rate Run",
+      "read_only": false,
+      "spends_credits": false,
+      "description": "Rate a finished generate_video / generate_image / generate_audio run 1 to 5, with an optional note (what was wrong or right). Costs nothing. Do this when the user reacts to an output, \"perfect\", \"her face changed\", \"too slow\", or when you can see a defect yourself. Ratings feed the per-model stats in list_models and the model:\"auto\" choice, so an honest 2 helps more than a polite 4.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "description": "The job id the generate tool returned."
+          },
+          "score": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "description": "1 = unusable, 3 = usable with edits, 5 = shipped as-is."
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "One line on why (optional)."
+          }
+        },
+        "required": [
+          "run_id",
+          "score"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "open_upload_panel",
+      "title": "Upload images",
+      "read_only": false,
+      "spends_credits": false,
+      "description": "Optional: available only when temporary uploads are enabled; check tools/list before calling. Open a drag-and-drop image upload panel for the user. Use when the user wants to supply photos, portraits, products, or image references, especially in Claude or ChatGPT. PNG/JPEG/WebP, up to 25 MB each and 10 images, available for up to 24 hours. No generation credits. Returns a browser link for clients without inline panels. Never ask the user to paste base64. After the user uploads, call get_uploads with the returned session_id; use the exact image_url in refs, first_frame, or a skill image field. Do not generate before images are ready.",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "get_uploads",
+      "title": "Get uploaded images",
+      "read_only": true,
+      "spends_credits": false,
+      "description": "Optional: available only when temporary uploads are enabled; check tools/list before calling. Retrieve uploaded images as native image previews plus original generation URLs and expiry times. Inspect the previews before describing the image or writing a prompt. Omit session_id to find recent unexpired sessions on this account if the session ID was lost; choose the session matching the user request, never silently mix unrelated uploads. Call after the user finishes uploading, not in a tight polling loop. Sessions and images expire 24 hours after the session opens; request a fresh upload if expired. Reuse these URLs for generation without downloading, re-encoding, or making a permanent copy.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  ],
+  "models": {
+    "defaults": {
+      "image": "gpt-image-2.5",
+      "video": "seedance-2.0",
+      "audio": "elevenlabs-tts"
+    },
+    "auto_policy": "model:\"auto\" starts from the kind's default (image: gpt-image-2.5, video: seedance-2.0, audio: elevenlabs-tts); switches only when the default failed >25% of >=10 runs and another live model is healthy, or when a live model within 1.5x the default's price beats its auto score by >=0.1 over >=10 judged runs. Scores come from an auto-judge that grades every loose-surface job (3 frames or the image against the realism rubric, prompt adherence, identity match) plus rate_run.",
+    "live": [
+      {
+        "recent": null,
+        "id": "seedance-2.0",
+        "kind": "video",
+        "tier": "standard",
+        "status": "live",
+        "provider": "evolink",
+        "modes": [
+          "text-to-video",
+          "image-to-video",
+          "reference-to-video"
+        ],
+        "features": [
+          "native-audio",
+          "lip-sync",
+          "first-frame",
+          "first-and-last-frame",
+          "image-references",
+          "video-references",
+          "audio-references"
+        ],
+        "limits": {},
+        "video": {
+          "modes": [
+            {
+              "mode": "text",
+              "how": "prompt only",
+              "inputs": {
+                "prompt": "required"
+              },
+              "seconds": {
+                "min": 4,
+                "max": 15
+              },
+              "aspects": [
+                "9:16",
+                "16:9",
+                "1:1",
+                "4:3",
+                "3:4",
+                "21:9",
+                "adaptive"
+              ],
+              "aspect_default": "9:16",
+              "qualities": [
+                "480p",
+                "720p",
+                "1080p"
+              ],
+              "credits_per_second": {
+                "480p": 30,
+                "720p": 60,
+                "1080p": 150
+              },
+              "seed": false,
+              "prompt_syntax": null,
+              "notes": [
+                "No seed. Every render is new; keep a series consistent with references, not seeds."
+              ],
+              "verified": {
+                "date": "2026-09-06",
+                "runId": "task-unified-1788681109-ghg38bm9",
+                "note": "4s, 16:9, 480p, native audio; rendered in 231 s"
+              }
+            },
+            {
+              "mode": "image",
+              "how": "pass first_frame (and optionally last_frame)",
+              "inputs": {
+                "first_frame": "required (https image)",
+                "last_frame": "optional (https image)"
+              },
+              "seconds": {
+                "min": 4,
+                "max": 15
+              },
+              "aspects": [
+                "9:16",
+                "16:9",
+                "1:1",
+                "4:3",
+                "3:4",
+                "21:9",
+                "adaptive"
+              ],
+              "aspect_default": "adaptive",
+              "qualities": [
+                "480p",
+                "720p",
+                "1080p"
+              ],
+              "credits_per_second": {
+                "480p": 30,
+                "720p": 60,
+                "1080p": 150
+              },
+              "seed": false,
+              "prompt_syntax": null,
+              "notes": [
+                "first_frame becomes frame one of the clip; last_frame (optional) becomes the final frame and the model animates between them.",
+                "Frames only: refs, video_refs and audio_refs are not accepted in this mode. To keep an identity AND set the frame, put the frame image in refs and describe it as @image1.",
+                "aspect \"adaptive\" (default) follows the first frame. Frame images: jpeg/png/webp, ratio between 0.4 and 2.5, 300 to 6000 px, up to 30 MB."
+              ],
+              "verified": {
+                "date": "2026-09-06",
+                "runId": "task-unified-1788681109-qybq2r1j",
+                "note": "first_frame only (4s, 480p, adaptive) and first_frame + last_frame (task-unified-1788681109-w09254uu); both rendered in about 3 to 5 min"
+              }
+            },
+            {
+              "mode": "reference",
+              "how": "pass refs, video_refs and/or audio_refs",
+              "inputs": {
+                "refs": "up to 9 https images",
+                "video_refs": "up to 3 https clips, 15 s in total; their seconds are billed like output seconds",
+                "audio_refs": "up to 3 https audio files, 15 s in total; needs an image or video reference beside it"
+              },
+              "seconds": {
+                "min": 4,
+                "max": 15
+              },
+              "aspects": [
+                "9:16",
+                "16:9",
+                "1:1",
+                "4:3",
+                "3:4",
+                "21:9",
+                "adaptive"
+              ],
+              "aspect_default": "9:16",
+              "qualities": [
+                "480p",
+                "720p",
+                "1080p"
+              ],
+              "credits_per_second": {
+                "480p": 30,
+                "720p": 60,
+                "1080p": 150
+              },
+              "seed": false,
+              "prompt_syntax": "@image1 @video1 @audio1 (numbered per list, from 1)",
+              "notes": [
+                "Address references in the prompt: \"@image1 holds @image2 and says ...\". Numbering is per list: refs are @image1.., video_refs are @video1.., audio_refs are @audio1...",
+                "Reference clips: 2 to 15 s each, 15 s in total, mp4/mov 480p to 1080p, 24 to 60 fps, up to 50 MB. Their seconds are billed like output seconds.",
+                "Audio references: wav/mp3, 2 to 15 s each, 15 s in total, up to 15 MB. Audio alone is not accepted: add an image or video reference.",
+                "aspect \"adaptive\" follows the first video reference, else the first image, else the prompt."
+              ],
+              "verified": {
+                "date": "2026-09-06",
+                "runId": "task-unified-1788681109-a6w7aq0y",
+                "note": "image ref (4s, 480p) and image ref + 8 s reference clip (task-unified-1788681110-hdbufncn); earlier 5s 720p portrait run b0011e92 via Claude Code"
+              }
+            }
+          ],
+          "credits_per_second": {
+            "480p": 30,
+            "720p": 60,
+            "1080p": 150
+          },
+          "default_quality": "720p",
+          "timeout_minutes": 30
+        },
+        "credits": {
+          "unit": "second",
+          "perUnit": 60
+        },
+        "price_default": "60 credits per second at 720p",
+        "quality": "good",
+        "speed": "medium",
+        "best_for": [
+          "talking-head UGC",
+          "product in hands",
+          "crazy look",
+          "bulk daily posts",
+          "animating a still (first frame) into a clip"
+        ],
+        "avoid_for": [
+          "clips over 15s",
+          "hero shots where 2.5 detail is worth the longer wait",
+          "anything that needs a seed"
+        ],
+        "usage": {
+          "pick_when": "you need a real-looking person saying real words, or a still brought to life, at a normal budget",
+          "prompt_tips": [
+            "Write the shot as a director: who (age, look), where (setting, light), what happens, phone framing, and the exact spoken words in quotes. About 2.3 words per second.",
+            "Keep a person consistent across clips with refs (a portrait or a character sheet), addressed as @image1; the model has no seed.",
+            "To animate a specific still, pass it as first_frame; add last_frame to control where the motion ends."
+          ],
+          "latency": "about 3 minutes for a 5 s clip at 720p"
+        },
+        "docs_url": "https://github.com/gitroomhq/agent-media/blob/main/reference/models/seedance-2.0.md",
+        "verified": [
+          {
+            "mode": "text",
+            "date": "2026-09-06",
+            "runId": "task-unified-1788681109-ghg38bm9",
+            "note": "4s, 16:9, 480p, native audio; rendered in 231 s"
+          },
+          {
+            "mode": "image",
+            "date": "2026-09-06",
+            "runId": "task-unified-1788681109-qybq2r1j",
+            "note": "first_frame only (4s, 480p, adaptive) and first_frame + last_frame (task-unified-1788681109-w09254uu); both rendered in about 3 to 5 min"
+          },
+          {
+            "mode": "reference",
+            "date": "2026-09-06",
+            "runId": "task-unified-1788681109-a6w7aq0y",
+            "note": "image ref (4s, 480p) and image ref + 8 s reference clip (task-unified-1788681110-hdbufncn); earlier 5s 720p portrait run b0011e92 via Claude Code"
+          }
+        ],
+        "select_with": {
+          "field": "model",
+          "value": "seedance-2.0",
+          "on": [
+            "generate_video (MCP)",
+            "POST /v2/generate/video",
+            "as `engine` on: agent-media selfie --engine",
+            "agent-media crazy-look --engine",
+            "POST /v2/selfie",
+            "POST /v2/crazy-look"
+          ],
+          "not_on": [
+            "make_ugc (always seedance-2.0)"
+          ]
+        }
+      },
+      {
+        "recent": null,
+        "id": "seedance-2.5",
+        "kind": "video",
+        "tier": "premium",
+        "status": "live",
+        "provider": "evolink",
+        "modes": [
+          "text-to-video",
+          "image-to-video",
+          "reference-to-video"
+        ],
+        "features": [
+          "native-audio",
+          "lip-sync",
+          "first-frame",
+          "first-and-last-frame",
+          "image-references",
+          "video-references",
+          "audio-references"
+        ],
+        "limits": {},
+        "video": {
+          "modes": [
+            {
+              "mode": "text",
+              "how": "prompt only",
+              "inputs": {
+                "prompt": "required"
+              },
+              "seconds": {
+                "min": 4,
+                "max": 30
+              },
+              "aspects": [
+                "9:16",
+                "16:9",
+                "1:1",
+                "4:3",
+                "3:4",
+                "21:9",
+                "adaptive"
+              ],
+              "aspect_default": "9:16",
+              "qualities": [
+                "480p",
+                "720p",
+                "1080p"
+              ],
+              "credits_per_second": {
+                "480p": 28,
+                "720p": 60,
+                "1080p": 150
+              },
+              "seed": false,
+              "prompt_syntax": null,
+              "notes": [
+                "No seed."
+              ],
+              "verified": {
+                "date": "2026-09-05",
+                "runId": "431f82ba-9e9e-4644-beb3-b1f67c0de91e",
+                "note": "generate_video, text only, 4s, 720p, 396 credits; the provider took about 25 min"
+              }
+            },
+            {
+              "mode": "image",
+              "how": "pass first_frame (and optionally last_frame)",
+              "inputs": {
+                "first_frame": "required (https image)",
+                "last_frame": "optional (https image)"
+              },
+              "seconds": {
+                "min": 4,
+                "max": 30
+              },
+              "aspects": [
+                "adaptive"
+              ],
+              "aspect_default": "adaptive",
+              "qualities": [
+                "480p",
+                "720p",
+                "1080p"
+              ],
+              "credits_per_second": {
+                "480p": 28,
+                "720p": 60,
+                "1080p": 150
+              },
+              "seed": false,
+              "prompt_syntax": null,
+              "notes": [
+                "first_frame becomes frame one; last_frame (optional) becomes the final frame.",
+                "aspect must be \"adaptive\" on this model in image mode: the clip takes the frame's ratio. Any other aspect is refused.",
+                "Frames only: refs, video_refs and audio_refs are not accepted in this mode."
+              ],
+              "verified": {
+                "date": "2026-09-06",
+                "runId": "task-unified-1788681109-pzf704jd",
+                "note": "first_frame, 4s, 480p, adaptive; rendered in 262 s"
+              }
+            },
+            {
+              "mode": "reference",
+              "how": "pass refs, video_refs and/or audio_refs",
+              "inputs": {
+                "refs": "up to 30 https images",
+                "video_refs": "up to 10 https clips, 30 s in total; their seconds are billed like output seconds",
+                "audio_refs": "up to 10 https audio files, 30 s in total"
+              },
+              "seconds": {
+                "min": 4,
+                "max": 30
+              },
+              "aspects": [
+                "9:16",
+                "16:9",
+                "1:1",
+                "4:3",
+                "3:4",
+                "21:9",
+                "adaptive"
+              ],
+              "aspect_default": "9:16",
+              "qualities": [
+                "480p",
+                "720p",
+                "1080p"
+              ],
+              "credits_per_second": {
+                "480p": 28,
+                "720p": 60,
+                "1080p": 150
+              },
+              "seed": false,
+              "prompt_syntax": "@image1 @video1 @audio1 (numbered per list, from 1)",
+              "notes": [
+                "Address references as @image1.., @video1.., @audio1.. (numbered per list).",
+                "Reference clips: 2 to 30 s each, 30 s in total, up to 4K, up to 200 MB; their seconds are billed like output seconds. Audio references may stand alone here.",
+                "Never write edit or extend intent (\"edit the video\", \"add\", \"remove\", \"replace\", \"extend\", \"continue\") into a reference prompt: the provider reclassifies the task and fails it minutes later. Describe the NEW clip you want."
+              ],
+              "verified": {
+                "date": "2026-09-06",
+                "note": "generate_video with a product image ref via Claude Code, 8s, 720p (perfume UGC run)"
+              }
+            }
+          ],
+          "credits_per_second": {
+            "480p": 28,
+            "720p": 60,
+            "1080p": 150
+          },
+          "default_quality": "720p",
+          "timeout_minutes": 90
+        },
+        "credits": {
+          "unit": "second",
+          "perUnit": 60
+        },
+        "price_default": "60 credits per second at 720p",
+        "quality": "premium",
+        "speed": "slow",
+        "best_for": [
+          "hero product ads",
+          "close-up faces",
+          "one clip that has to be the best"
+        ],
+        "avoid_for": [
+          "drafts",
+          "bulk",
+          "anyone who cannot wait 15 to 30 minutes"
+        ],
+        "usage": {
+          "pick_when": "the user asked for the best possible single clip and accepts the wait (12 to 25 minutes); at 480p it costs the same as 2.0",
+          "prompt_tips": [
+            "Same director-style prompt and @image1 references as seedance-2.0.",
+            "In image mode leave aspect out (it is adaptive); the frame decides the ratio.",
+            "Do not put edit or extend wording in a reference prompt."
+          ],
+          "latency": "12 to 25 minutes per clip; plan the wait"
+        },
+        "docs_url": "https://github.com/gitroomhq/agent-media/blob/main/reference/models/seedance-2.5.md",
+        "verified": [
+          {
+            "mode": "text",
+            "date": "2026-09-05",
+            "runId": "431f82ba-9e9e-4644-beb3-b1f67c0de91e",
+            "note": "generate_video, text only, 4s, 720p, 396 credits; the provider took about 25 min"
+          },
+          {
+            "mode": "image",
+            "date": "2026-09-06",
+            "runId": "task-unified-1788681109-pzf704jd",
+            "note": "first_frame, 4s, 480p, adaptive; rendered in 262 s"
+          },
+          {
+            "mode": "reference",
+            "date": "2026-09-06",
+            "note": "generate_video with a product image ref via Claude Code, 8s, 720p (perfume UGC run)"
+          }
+        ],
+        "select_with": {
+          "field": "model",
+          "value": "seedance-2.5",
+          "on": [
+            "generate_video (MCP)",
+            "POST /v2/generate/video",
+            "as `engine` on: agent-media selfie --engine",
+            "agent-media crazy-look --engine",
+            "POST /v2/selfie",
+            "POST /v2/crazy-look"
+          ],
+          "not_on": [
+            "make_ugc (always seedance-2.0)"
+          ]
+        }
+      },
+      {
+        "recent": null,
+        "id": "gpt-image-2.5",
+        "kind": "image",
+        "tier": "premium",
+        "status": "live",
+        "provider": "openai",
+        "modes": [
+          "text-to-image",
+          "image-edit"
+        ],
+        "features": [
+          "portrait",
+          "character-sheet",
+          "wireframe",
+          "identity-hold",
+          "multi-reference",
+          "prompt-adherence"
+        ],
+        "limits": {
+          "resolutions": [
+            "1024x1024",
+            "1024x1536",
+            "1536x1024"
+          ],
+          "refsMax": 4
+        },
+        "video": null,
+        "credits": {
+          "unit": "image",
+          "perUnit": 20
+        },
+        "price_default": "20 credits per image",
+        "quality": "premium",
+        "speed": "fast",
+        "best_for": [
+          "portraits and character sheets that a video has to keep",
+          "the first frame of a clip",
+          "product in hand",
+          "edits that must not lose the face"
+        ],
+        "avoid_for": [
+          "bulk throwaway drafts where gpt-image-2.5-flare is faster"
+        ],
+        "usage": {
+          "pick_when": "you are making the image a video will be built on: a portrait, a character sheet, a first frame, or an edit that has to keep the same person",
+          "prompt_tips": [
+            "Concrete subject, age, framing, light, what the hands do; it follows layout instructions like \"four poses on a plain background\" or \"headroom for a caption\".",
+            "With refs it edits or composes from them and holds the identity across poses, which is what makes a character sheet usable as a video reference.",
+            "Pass the result straight to generate_video as first_frame (to animate it) or in refs (to keep that person across clips)."
+          ],
+          "latency": "about 30 seconds, a little longer for an edit with references"
+        },
+        "docs_url": "https://github.com/gitroomhq/agent-media/blob/main/reference/models/gpt-image-2.5.md",
+        "verified": null,
+        "select_with": {
+          "field": "model",
+          "value": "gpt-image-2.5",
+          "on": [
+            "generate_image (MCP)",
+            "POST /v2/generate/image"
+          ],
+          "not_on": []
+        }
+      },
+      {
+        "recent": null,
+        "id": "gpt-image-2.5-flare",
+        "kind": "image",
+        "tier": "standard",
+        "status": "live",
+        "provider": "openai",
+        "modes": [
+          "text-to-image",
+          "image-edit"
+        ],
+        "features": [
+          "portrait",
+          "character-sheet",
+          "wireframe",
+          "fast"
+        ],
+        "limits": {
+          "resolutions": [
+            "1024x1024",
+            "1024x1536",
+            "1536x1024"
+          ],
+          "refsMax": 4
+        },
+        "video": null,
+        "credits": {
+          "unit": "image",
+          "perUnit": 20
+        },
+        "price_default": "20 credits per image",
+        "quality": "good",
+        "speed": "fast",
+        "best_for": [
+          "variants and drafts at the same quality tier",
+          "batches of frames",
+          "anything where a few seconds matter"
+        ],
+        "avoid_for": [
+          "the one sheet a whole series depends on, where gpt-image-2.5 edits hold identity a little better"
+        ],
+        "usage": {
+          "pick_when": "you want the same look as gpt-image-2.5 but faster, or you are making several images at once",
+          "prompt_tips": [
+            "Same prompts as gpt-image-2.5; it is the speed tier of the same family."
+          ],
+          "latency": "about 15 to 30 seconds"
+        },
+        "docs_url": "https://github.com/gitroomhq/agent-media/blob/main/reference/models/gpt-image-2.5-flare.md",
+        "verified": null,
+        "select_with": {
+          "field": "model",
+          "value": "gpt-image-2.5-flare",
+          "on": [
+            "generate_image (MCP)",
+            "POST /v2/generate/image"
+          ],
+          "not_on": []
+        }
+      },
+      {
+        "recent": null,
+        "id": "gpt-image-2",
+        "kind": "image",
+        "tier": "standard",
+        "status": "live",
+        "provider": "openai",
+        "modes": [
+          "text-to-image",
+          "image-edit"
+        ],
+        "features": [
+          "portrait",
+          "character-sheet",
+          "wireframe",
+          "prompt-adherence"
+        ],
+        "limits": {
+          "resolutions": [
+            "1024x1024",
+            "1024x1536",
+            "1536x1024"
+          ],
+          "refsMax": 4
+        },
+        "video": null,
+        "credits": {
+          "unit": "image",
+          "perUnit": 20
+        },
+        "price_default": "20 credits per image",
+        "quality": "good",
+        "speed": "fast",
+        "best_for": [
+          "the previous generation, kept selectable for runs that were built on it"
+        ],
+        "avoid_for": [
+          "new work: gpt-image-2.5 is the default and holds identity better"
+        ],
+        "usage": {
+          "pick_when": "you are reproducing something that was made on gpt-image-2; otherwise take the default",
+          "prompt_tips": [
+            "Concrete subject, age, framing, light, what the hands do; it follows layout instructions like \"headroom for a caption\".",
+            "With refs it EDITS or composes from them (a product into a hand, a portrait re-lit); without refs it paints from the prompt alone."
+          ],
+          "latency": "under a minute"
+        },
+        "docs_url": "https://github.com/gitroomhq/agent-media/blob/main/reference/models/gpt-image-2.md",
+        "verified": {
+          "date": "2026-09-05",
+          "note": "every video pipeline stage A-C; portrait + sheet produced on run 2749ee84; standalone via generate_image"
+        },
+        "select_with": {
+          "field": "model",
+          "value": "gpt-image-2",
+          "on": [
+            "generate_image (MCP)",
+            "POST /v2/generate/image"
+          ],
+          "not_on": []
+        }
+      },
+      {
+        "recent": null,
+        "id": "elevenlabs-tts",
+        "kind": "audio",
+        "tier": "standard",
+        "status": "live",
+        "provider": "elevenlabs",
+        "modes": [
+          "text-to-speech"
+        ],
+        "features": [
+          "voice-clone",
+          "multilingual",
+          "dubbing"
+        ],
+        "limits": {},
+        "video": null,
+        "credits": {
+          "unit": "character",
+          "perUnit": 0.01
+        },
+        "price_default": "0.01 credits per character",
+        "quality": "good",
+        "speed": "fast",
+        "best_for": [
+          "voiceover on b-roll",
+          "narration",
+          "a standalone voice file",
+          "an audio reference for generate_video"
+        ],
+        "avoid_for": [
+          "lip-synced talking head: generate_video renders speech natively"
+        ],
+        "usage": {
+          "pick_when": "you need a clean voice track and no face",
+          "prompt_tips": [
+            "Emotion tags like [excited] or [whispers] are honoured; keep sentences short for pacing.",
+            "Seven named voices (sarah default) or a raw ElevenLabs voice id."
+          ],
+          "latency": "seconds"
+        },
+        "docs_url": "https://github.com/gitroomhq/agent-media/blob/main/reference/models/elevenlabs-tts.md",
+        "verified": {
+          "date": "2026-09-05",
+          "note": "wired in media-worker-v2 (tts.js, dubbing.js); standalone via generate_audio"
+        },
+        "select_with": {
+          "field": "model",
+          "value": "elevenlabs-tts",
+          "on": [
+            "generate_audio (MCP)",
+            "POST /v2/generate/audio"
+          ],
+          "not_on": []
+        }
+      }
+    ],
+    "video_modes": {
+      "seedance-2.0": [
+        {
+          "mode": "text",
+          "how": "prompt only",
+          "inputs": {
+            "prompt": "required"
+          },
+          "seconds": {
+            "min": 4,
+            "max": 15
+          },
+          "aspects": [
+            "9:16",
+            "16:9",
+            "1:1",
+            "4:3",
+            "3:4",
+            "21:9",
+            "adaptive"
+          ],
+          "aspect_default": "9:16",
+          "qualities": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "credits_per_second": {
+            "480p": 30,
+            "720p": 60,
+            "1080p": 150
+          },
+          "seed": false,
+          "prompt_syntax": null,
+          "notes": [
+            "No seed. Every render is new; keep a series consistent with references, not seeds."
+          ],
+          "verified": {
+            "date": "2026-09-06",
+            "runId": "task-unified-1788681109-ghg38bm9",
+            "note": "4s, 16:9, 480p, native audio; rendered in 231 s"
+          }
+        },
+        {
+          "mode": "image",
+          "how": "pass first_frame (and optionally last_frame)",
+          "inputs": {
+            "first_frame": "required (https image)",
+            "last_frame": "optional (https image)"
+          },
+          "seconds": {
+            "min": 4,
+            "max": 15
+          },
+          "aspects": [
+            "9:16",
+            "16:9",
+            "1:1",
+            "4:3",
+            "3:4",
+            "21:9",
+            "adaptive"
+          ],
+          "aspect_default": "adaptive",
+          "qualities": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "credits_per_second": {
+            "480p": 30,
+            "720p": 60,
+            "1080p": 150
+          },
+          "seed": false,
+          "prompt_syntax": null,
+          "notes": [
+            "first_frame becomes frame one of the clip; last_frame (optional) becomes the final frame and the model animates between them.",
+            "Frames only: refs, video_refs and audio_refs are not accepted in this mode. To keep an identity AND set the frame, put the frame image in refs and describe it as @image1.",
+            "aspect \"adaptive\" (default) follows the first frame. Frame images: jpeg/png/webp, ratio between 0.4 and 2.5, 300 to 6000 px, up to 30 MB."
+          ],
+          "verified": {
+            "date": "2026-09-06",
+            "runId": "task-unified-1788681109-qybq2r1j",
+            "note": "first_frame only (4s, 480p, adaptive) and first_frame + last_frame (task-unified-1788681109-w09254uu); both rendered in about 3 to 5 min"
+          }
+        },
+        {
+          "mode": "reference",
+          "how": "pass refs, video_refs and/or audio_refs",
+          "inputs": {
+            "refs": "up to 9 https images",
+            "video_refs": "up to 3 https clips, 15 s in total; their seconds are billed like output seconds",
+            "audio_refs": "up to 3 https audio files, 15 s in total; needs an image or video reference beside it"
+          },
+          "seconds": {
+            "min": 4,
+            "max": 15
+          },
+          "aspects": [
+            "9:16",
+            "16:9",
+            "1:1",
+            "4:3",
+            "3:4",
+            "21:9",
+            "adaptive"
+          ],
+          "aspect_default": "9:16",
+          "qualities": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "credits_per_second": {
+            "480p": 30,
+            "720p": 60,
+            "1080p": 150
+          },
+          "seed": false,
+          "prompt_syntax": "@image1 @video1 @audio1 (numbered per list, from 1)",
+          "notes": [
+            "Address references in the prompt: \"@image1 holds @image2 and says ...\". Numbering is per list: refs are @image1.., video_refs are @video1.., audio_refs are @audio1...",
+            "Reference clips: 2 to 15 s each, 15 s in total, mp4/mov 480p to 1080p, 24 to 60 fps, up to 50 MB. Their seconds are billed like output seconds.",
+            "Audio references: wav/mp3, 2 to 15 s each, 15 s in total, up to 15 MB. Audio alone is not accepted: add an image or video reference.",
+            "aspect \"adaptive\" follows the first video reference, else the first image, else the prompt."
+          ],
+          "verified": {
+            "date": "2026-09-06",
+            "runId": "task-unified-1788681109-a6w7aq0y",
+            "note": "image ref (4s, 480p) and image ref + 8 s reference clip (task-unified-1788681110-hdbufncn); earlier 5s 720p portrait run b0011e92 via Claude Code"
+          }
+        }
+      ],
+      "seedance-2.5": [
+        {
+          "mode": "text",
+          "how": "prompt only",
+          "inputs": {
+            "prompt": "required"
+          },
+          "seconds": {
+            "min": 4,
+            "max": 30
+          },
+          "aspects": [
+            "9:16",
+            "16:9",
+            "1:1",
+            "4:3",
+            "3:4",
+            "21:9",
+            "adaptive"
+          ],
+          "aspect_default": "9:16",
+          "qualities": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "credits_per_second": {
+            "480p": 28,
+            "720p": 60,
+            "1080p": 150
+          },
+          "seed": false,
+          "prompt_syntax": null,
+          "notes": [
+            "No seed."
+          ],
+          "verified": {
+            "date": "2026-09-05",
+            "runId": "431f82ba-9e9e-4644-beb3-b1f67c0de91e",
+            "note": "generate_video, text only, 4s, 720p, 396 credits; the provider took about 25 min"
+          }
+        },
+        {
+          "mode": "image",
+          "how": "pass first_frame (and optionally last_frame)",
+          "inputs": {
+            "first_frame": "required (https image)",
+            "last_frame": "optional (https image)"
+          },
+          "seconds": {
+            "min": 4,
+            "max": 30
+          },
+          "aspects": [
+            "adaptive"
+          ],
+          "aspect_default": "adaptive",
+          "qualities": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "credits_per_second": {
+            "480p": 28,
+            "720p": 60,
+            "1080p": 150
+          },
+          "seed": false,
+          "prompt_syntax": null,
+          "notes": [
+            "first_frame becomes frame one; last_frame (optional) becomes the final frame.",
+            "aspect must be \"adaptive\" on this model in image mode: the clip takes the frame's ratio. Any other aspect is refused.",
+            "Frames only: refs, video_refs and audio_refs are not accepted in this mode."
+          ],
+          "verified": {
+            "date": "2026-09-06",
+            "runId": "task-unified-1788681109-pzf704jd",
+            "note": "first_frame, 4s, 480p, adaptive; rendered in 262 s"
+          }
+        },
+        {
+          "mode": "reference",
+          "how": "pass refs, video_refs and/or audio_refs",
+          "inputs": {
+            "refs": "up to 30 https images",
+            "video_refs": "up to 10 https clips, 30 s in total; their seconds are billed like output seconds",
+            "audio_refs": "up to 10 https audio files, 30 s in total"
+          },
+          "seconds": {
+            "min": 4,
+            "max": 30
+          },
+          "aspects": [
+            "9:16",
+            "16:9",
+            "1:1",
+            "4:3",
+            "3:4",
+            "21:9",
+            "adaptive"
+          ],
+          "aspect_default": "9:16",
+          "qualities": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "credits_per_second": {
+            "480p": 28,
+            "720p": 60,
+            "1080p": 150
+          },
+          "seed": false,
+          "prompt_syntax": "@image1 @video1 @audio1 (numbered per list, from 1)",
+          "notes": [
+            "Address references as @image1.., @video1.., @audio1.. (numbered per list).",
+            "Reference clips: 2 to 30 s each, 30 s in total, up to 4K, up to 200 MB; their seconds are billed like output seconds. Audio references may stand alone here.",
+            "Never write edit or extend intent (\"edit the video\", \"add\", \"remove\", \"replace\", \"extend\", \"continue\") into a reference prompt: the provider reclassifies the task and fails it minutes later. Describe the NEW clip you want."
+          ],
+          "verified": {
+            "date": "2026-09-06",
+            "note": "generate_video with a product image ref via Claude Code, 8s, 720p (perfume UGC run)"
+          }
+        }
+      ]
+    },
+    "candidates": [
+      {
+        "id": "seedance-2.0-mini",
+        "kind": "video",
+        "tier": "draft",
+        "modes": [
+          "text-to-video",
+          "image-to-video",
+          "reference-to-video"
+        ],
+        "best_for": [
+          "drafts",
+          "previews",
+          "bulk variants before picking one to render on 2.0"
+        ],
+        "avoid_for": [
+          "final deliverables",
+          "1080p (not offered)"
+        ],
+        "note": "planned: not selectable and unpriced until a real run is recorded"
+      },
+      {
+        "id": "kling-o3",
+        "kind": "video",
+        "tier": "premium",
+        "modes": [
+          "text-to-video",
+          "image-to-video",
+          "reference-to-video"
+        ],
+        "best_for": [
+          "1080p hero shots with a non-Seedance look",
+          "first-to-last-frame moves"
+        ],
+        "avoid_for": [
+          "bulk",
+          "speech-driven UGC until verified"
+        ],
+        "note": "planned: not selectable and unpriced until a real run is recorded"
+      },
+      {
+        "id": "wan-3.0",
+        "kind": "video",
+        "tier": "standard",
+        "modes": [
+          "text-to-video",
+          "image-to-video",
+          "reference-to-video"
+        ],
+        "best_for": [
+          "single takes of 15 to 30 s",
+          "reproducible series via seed"
+        ],
+        "avoid_for": [
+          "lip-synced speech until verified",
+          "21:9"
+        ],
+        "note": "planned: not selectable and unpriced until a real run is recorded"
+      },
+      {
+        "id": "omnihuman-1.5",
+        "kind": "video",
+        "tier": "premium",
+        "modes": [
+          "lipsync"
+        ],
+        "best_for": [
+          "lip-syncing one photo to an existing recording"
+        ],
+        "avoid_for": [
+          "silent clips",
+          "audio over 35 s",
+          "more than one person"
+        ],
+        "note": "planned: not selectable and unpriced until a real run is recorded"
+      },
+      {
+        "id": "sora-2",
+        "kind": "video",
+        "tier": "premium",
+        "modes": [
+          "text-to-video",
+          "image-to-video"
+        ],
+        "best_for": [
+          "cinematic b-roll without a locked face"
+        ],
+        "avoid_for": [
+          "anything that must keep a saved character identity",
+          "real people"
+        ],
+        "note": "planned: not selectable and unpriced until a real run is recorded"
+      },
+      {
+        "id": "nano-banana-2",
+        "kind": "image",
+        "tier": "standard",
+        "modes": [
+          "text-to-image",
+          "image-edit"
+        ],
+        "best_for": [
+          "product placement into a character frame",
+          "character sheet edits",
+          "composites with many references"
+        ],
+        "avoid_for": [
+          "more than 4 real-person images per request"
+        ],
+        "note": "planned: not selectable and unpriced until a real run is recorded"
+      },
+      {
+        "id": "seedream-5.0-pro",
+        "kind": "image",
+        "tier": "premium",
+        "modes": [
+          "text-to-image",
+          "image-edit"
+        ],
+        "best_for": [
+          "multi-reference composites: person + product + setting"
+        ],
+        "avoid_for": [
+          "wireframes"
+        ],
+        "note": "planned: not selectable and unpriced until a real run is recorded"
+      },
+      {
+        "id": "z-image-turbo",
+        "kind": "image",
+        "tier": "draft",
+        "modes": [
+          "text-to-image"
+        ],
+        "best_for": [
+          "framing wireframes",
+          "throwaway previews"
+        ],
+        "avoid_for": [
+          "anything a user sees",
+          "edits (no references)"
+        ],
+        "note": "planned: not selectable and unpriced until a real run is recorded"
+      },
+      {
+        "id": "doubao-seed-audio-1.0",
+        "kind": "audio",
+        "tier": "draft",
+        "modes": [
+          "text-to-speech"
+        ],
+        "best_for": [
+          "cloning a voice from a short reference clip",
+          "up to 120 s of speech per request"
+        ],
+        "avoid_for": [
+          "plain narration (elevenlabs-tts is live and cheaper for the user)"
+        ],
+        "note": "planned: not selectable and unpriced until a real run is recorded"
+      },
+      {
+        "id": "suno",
+        "kind": "audio",
+        "tier": "standard",
+        "modes": [
+          "music"
+        ],
+        "best_for": [
+          "a music bed under a clip"
+        ],
+        "avoid_for": [],
+        "note": "planned: not selectable and unpriced until a real run is recorded"
+      }
+    ],
+    "recent_url": "https://api.agent-media.ai/v1/models"
+  },
+  "pricing": {
+    "credit_usd": 0.01,
+    "rules": [
+      {
+        "model": "seedance-2.0",
+        "kind": "video",
+        "rate": "30 credits/s at 480p, 60 at 720p, 150 at 1080p, per output second; default quality 720p",
+        "per_quality": {
+          "480p": 30,
+          "720p": 60,
+          "1080p": 150
+        },
+        "reference_clips": "seconds of video_refs are measured at submit and billed at the same per-second rate as output seconds"
+      },
+      {
+        "model": "seedance-2.5",
+        "kind": "video",
+        "rate": "28 credits/s at 480p, 60 at 720p, 150 at 1080p, per output second; default quality 720p",
+        "per_quality": {
+          "480p": 28,
+          "720p": 60,
+          "1080p": 150
+        },
+        "reference_clips": "seconds of video_refs are measured at submit and billed at the same per-second rate as output seconds"
+      },
+      {
+        "model": "gpt-image-2.5",
+        "kind": "image",
+        "rate": "20 credits per image"
+      },
+      {
+        "model": "gpt-image-2.5-flare",
+        "kind": "image",
+        "rate": "20 credits per image"
+      },
+      {
+        "model": "gpt-image-2",
+        "kind": "image",
+        "rate": "20 credits per image"
+      },
+      {
+        "model": "elevenlabs-tts",
+        "kind": "audio",
+        "rate": "1 credit per 100 characters, rounded up"
+      },
+      {
+        "model": "get_account, quote, list_models, list_characters, get_run_status, upload_image, open_upload_panel, get_uploads, rate_run",
+        "kind": "no generation charge",
+        "rate": "0 credits; does not grant or refill credits"
+      }
+    ],
+    "examples": [
+      {
+        "model": "seedance-2.0",
+        "mode": "text",
+        "quality": "720p",
+        "credits": 300,
+        "usd": 3,
+        "breakdown": "5s on seedance-2.0 (text mode, 720p) at 60 credits/second"
+      },
+      {
+        "model": "seedance-2.0",
+        "mode": "text",
+        "quality": "720p",
+        "credits": 600,
+        "usd": 6,
+        "breakdown": "10s on seedance-2.0 (text mode, 720p) at 60 credits/second"
+      },
+      {
+        "model": "seedance-2.0",
+        "mode": "text",
+        "quality": "720p",
+        "credits": 900,
+        "usd": 9,
+        "breakdown": "15s on seedance-2.0 (text mode, 720p) at 60 credits/second"
+      },
+      {
+        "model": "seedance-2.0",
+        "mode": "text",
+        "quality": "480p",
+        "credits": 150,
+        "usd": 1.5,
+        "breakdown": "5s on seedance-2.0 (text mode, 480p) at 30 credits/second"
+      },
+      {
+        "model": "seedance-2.0",
+        "mode": "text",
+        "quality": "1080p",
+        "credits": 750,
+        "usd": 7.5,
+        "breakdown": "5s on seedance-2.0 (text mode, 1080p) at 150 credits/second"
+      },
+      {
+        "model": "seedance-2.0",
+        "mode": "image",
+        "quality": "720p",
+        "credits": 300,
+        "usd": 3,
+        "breakdown": "5s on seedance-2.0 (image mode, 720p) at 60 credits/second"
+      },
+      {
+        "model": "seedance-2.0",
+        "mode": "reference",
+        "quality": "720p",
+        "credits": 600,
+        "usd": 6,
+        "breakdown": "5s on seedance-2.0 (reference mode, 720p) at 60 credits/second + 5s of reference video at the same rate"
+      },
+      {
+        "model": "seedance-2.5",
+        "mode": "text",
+        "quality": "480p",
+        "credits": 140,
+        "usd": 1.4,
+        "breakdown": "5s on seedance-2.5 (text mode, 480p) at 28 credits/second"
+      },
+      {
+        "model": "gpt-image-2.5",
+        "credits": 20,
+        "usd": 0.2,
+        "breakdown": "1 image on gpt-image-2.5 at 20 credits/image"
+      },
+      {
+        "model": "elevenlabs-tts",
+        "credits": 3,
+        "usd": 0.03,
+        "breakdown": "250 characters on elevenlabs-tts at 0.01 credits/character"
+      }
+    ],
+    "refund": "Credits are deducted when a new generation is accepted. Failure and refund confirmation are separate: report a refund only when the service confirms it. A timeout or unavailable status does not prove failure or a refund."
+  },
+  "limits": {
+    "video": {
+      "modes": "first_frame (and optional last_frame) selects image-to-video; refs, video_refs or audio_refs select reference; neither is text. Frames and refs cannot be mixed on Seedance.",
+      "seconds": {
+        "seedance-2.0": {
+          "text": [
+            4,
+            15
+          ],
+          "image": [
+            4,
+            15
+          ],
+          "reference": [
+            4,
+            15
+          ]
+        },
+        "seedance-2.5": {
+          "text": [
+            4,
+            30
+          ],
+          "image": [
+            4,
+            30
+          ],
+          "reference": [
+            4,
+            30
+          ]
+        }
+      },
+      "aspects": [
+        "9:16",
+        "16:9",
+        "1:1",
+        "4:3",
+        "3:4",
+        "21:9",
+        "adaptive"
+      ],
+      "qualities": [
+        "480p",
+        "720p",
+        "1080p"
+      ],
+      "quality_default": "720p",
+      "per_model": {
+        "seedance-2.0": {
+          "text": {
+            "seconds": [
+              4,
+              15
+            ],
+            "aspects": [
+              "9:16",
+              "16:9",
+              "1:1",
+              "4:3",
+              "3:4",
+              "21:9",
+              "adaptive"
+            ],
+            "aspect_default": "9:16",
+            "qualities": [
+              "480p",
+              "720p",
+              "1080p"
+            ]
+          },
+          "image": {
+            "seconds": [
+              4,
+              15
+            ],
+            "aspects": [
+              "9:16",
+              "16:9",
+              "1:1",
+              "4:3",
+              "3:4",
+              "21:9",
+              "adaptive"
+            ],
+            "aspect_default": "adaptive",
+            "qualities": [
+              "480p",
+              "720p",
+              "1080p"
+            ],
+            "last_frame": true
+          },
+          "reference": {
+            "seconds": [
+              4,
+              15
+            ],
+            "aspects": [
+              "9:16",
+              "16:9",
+              "1:1",
+              "4:3",
+              "3:4",
+              "21:9",
+              "adaptive"
+            ],
+            "aspect_default": "9:16",
+            "qualities": [
+              "480p",
+              "720p",
+              "1080p"
+            ],
+            "refs": {
+              "images": 9,
+              "videos": 3,
+              "audios": 3,
+              "video_seconds_total": 15,
+              "audio_seconds_total": 15,
+              "audio_alone": false
+            }
+          }
+        },
+        "seedance-2.5": {
+          "text": {
+            "seconds": [
+              4,
+              30
+            ],
+            "aspects": [
+              "9:16",
+              "16:9",
+              "1:1",
+              "4:3",
+              "3:4",
+              "21:9",
+              "adaptive"
+            ],
+            "aspect_default": "9:16",
+            "qualities": [
+              "480p",
+              "720p",
+              "1080p"
+            ]
+          },
+          "image": {
+            "seconds": [
+              4,
+              30
+            ],
+            "aspects": [
+              "adaptive"
+            ],
+            "aspect_default": "adaptive",
+            "qualities": [
+              "480p",
+              "720p",
+              "1080p"
+            ],
+            "last_frame": true
+          },
+          "reference": {
+            "seconds": [
+              4,
+              30
+            ],
+            "aspects": [
+              "9:16",
+              "16:9",
+              "1:1",
+              "4:3",
+              "3:4",
+              "21:9",
+              "adaptive"
+            ],
+            "aspect_default": "9:16",
+            "qualities": [
+              "480p",
+              "720p",
+              "1080p"
+            ],
+            "refs": {
+              "images": 30,
+              "videos": 10,
+              "audios": 10,
+              "video_seconds_total": 30,
+              "audio_seconds_total": 30,
+              "audio_alone": true
+            }
+          }
+        }
+      },
+      "consistency": "keep a series consistent with refs (the same portrait or character sheet in every call); there is no other handle"
+    },
+    "image": {
+      "sizes": [
+        "1024x1024",
+        "1024x1536",
+        "1536x1024"
+      ],
+      "resolutions": [
+        "1024x1024",
+        "1024x1536",
+        "1536x1024"
+      ],
+      "refs_max": 4
+    },
+    "audio": {
+      "voices": [
+        {
+          "name": "jessica",
+          "note": "young female"
+        },
+        {
+          "name": "sarah",
+          "note": "female"
+        },
+        {
+          "name": "liam",
+          "note": "young male"
+        },
+        {
+          "name": "chris",
+          "note": "male"
+        },
+        {
+          "name": "lily",
+          "note": "elder female"
+        },
+        {
+          "name": "bill",
+          "note": "elder male"
+        },
+        {
+          "name": "matilda",
+          "note": "warm, mom"
+        }
+      ],
+      "tones": [
+        "energetic",
+        "calm",
+        "confident",
+        "dramatic"
+      ],
+      "max_chars": 4000
+    },
+    "refs": "Use HTTPS URLs. The temporary upload panel accepts up to 10 still PNG/JPEG/WebP images, 25 MB each, and expires 24 hours after session creation. For a local file, use the presign/PUT/confirm flow. The legacy base64/URL upload endpoint has separate limits. Never paste image bytes into chat."
+  },
+  "rest": {
+    "base": "https://api.agent-media.ai",
+    "auth": "Authorization: Bearer YOUR_AGENT_MEDIA_API_KEY",
+    "routes": [
+      {
+        "method": "POST",
+        "path": "/v1/skills/make_ugc/quote",
+        "body": "{ script or scene_action, person?, image?, character?, product_image?, broll_url?, captions?, caption_style? }",
+        "returns": "200 { credits, available, committed, sufficient }; no generation or debit"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/skills/make_ugc/run",
+        "body": "the same exact quoted input",
+        "returns": "202 { skill_run_id, workflow_id, status }; poll the skill run for final_output.video_url"
+      },
+      {
+        "method": "GET",
+        "path": "/v1/skills/runs/{skill_run_id}",
+        "body": "",
+        "returns": "{ status, steps, final_output, error }; final_output.video_url when succeeded"
+      },
+      {
+        "method": "POST",
+        "path": "/v2/generate/{video|image|audio}",
+        "body": "the tool arguments",
+        "returns": "201 new job; 200 saved receipt on retry; 202 acknowledgement uncertain. Returns job_id, request_id, credits_deducted, status_url and model details."
+      },
+      {
+        "method": "POST",
+        "path": "/v2/quote/{video|image|audio}",
+        "body": "the same arguments",
+        "returns": "200 { credits, usd, model, mode?, quality?, breakdown, auto? }"
+      },
+      {
+        "method": "GET",
+        "path": "/v1/videos/{job_id}",
+        "body": "",
+        "returns": "{ status, video_url, ... }; video_url holds the output for image/audio too. 503 STATUS_UNAVAILABLE: retry the same job."
+      },
+      {
+        "method": "GET",
+        "path": "/v1/me/readiness",
+        "body": "",
+        "returns": "{ authenticated, credits, generation, uploads, billing_url }; 503 means balance unknown"
+      },
+      {
+        "method": "GET",
+        "path": "/v1/models",
+        "body": "",
+        "returns": "the catalog with modes, prices per quality and recent stats; public"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/runs/{job_id}/rate",
+        "body": "{ score: 1..5, note? }",
+        "returns": "200 { job_id, model, score }"
+      },
+      {
+        "method": "GET",
+        "path": "/v1/upload-sessions",
+        "body": "",
+        "returns": "{ sessions }; owned unexpired session IDs and filenames, no image URLs or tokens"
+      },
+      {
+        "method": "GET",
+        "path": "/v1/upload-sessions/{session_id}/previews",
+        "body": "",
+        "returns": "{ previews, unavailable }; owner-only bounded JPEG inspection previews, not generation inputs"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/upload-sessions",
+        "body": "{}; temporary uploads must be enabled",
+        "returns": "201 { session_id, upload_url, upload_token, expires_at, max_bytes, max_files, images }"
+      },
+      {
+        "method": "GET",
+        "path": "/v1/upload-sessions/{session_id}",
+        "body": "",
+        "returns": "{ session_id, expires_at, max_bytes, max_files, images }; owner authentication required"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/uploads/presign",
+        "body": "{ bytes, content_type?, filename? }",
+        "returns": "{ put_url, upload_key, content_type, bytes, expires_in, ... }; PUT original bytes, then confirm"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/uploads/confirm",
+        "body": "{ upload_key }",
+        "returns": "{ image_url, mime, bytes }"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/uploads/image",
+        "body": "{ image_base64 } or { image_url }",
+        "returns": "{ image_url }"
+      },
+      {
+        "method": "GET",
+        "path": "/v1/characters",
+        "body": "",
+        "returns": "saved characters with sheet/portrait URLs"
+      }
+    ],
+    "openapi": "https://api.agent-media.ai/openapi.json",
+    "reference": "https://api.agent-media.ai/docs",
+    "curl": "curl -X POST https://api.agent-media.ai/v2/quote/video \\\n  -H \"Authorization: Bearer ma_...\" -H \"Content-Type: application/json\" \\\n  -d '{ \"prompt\": \"A 28-year-old woman in a bright kitchen, phone framing, holds a serum bottle to the lens and says: \\\"Okay, I did not expect this to work.\\\"\", \"seconds\": 5 }'",
+    "fixed_skills_note": "The hosted connector exposes make_ugc as an optional composed workflow, with quote_ugc before spending. Agents can instead combine the direct image, video and audio tools freely. The other fixed recipes remain REST and CLI routes for the dashboard."
+  },
+  "recipes": [
+    {
+      "id": "talking-head",
+      "title": "Talking-head UGC clip",
+      "credits": "300 credits for 5 s on seedance-2.0 at 720p",
+      "steps": [
+        {
+          "tool": "generate_video",
+          "text": "Script in quotes in the prompt; seconds from the word count (about 2.3 per second); refs = a portrait if the face must persist, addressed as @image1."
+        },
+        {
+          "tool": "get_run_status",
+          "text": "Poll with wait:true until completed; hand over the URL."
+        }
+      ]
+    },
+    {
+      "id": "product-in-hand",
+      "title": "Product in hand",
+      "credits": "20 credits for the frame, then 300 for a 5 s clip at 720p",
+      "steps": [
+        {
+          "tool": "upload_image",
+          "text": "The product photo becomes an https URL."
+        },
+        {
+          "tool": "generate_image",
+          "text": "\"... holding THIS product up to the lens, label facing camera ...\" with the product URL (and a portrait, if any) in refs."
+        },
+        {
+          "tool": "generate_video",
+          "text": "The frame URL in refs as @image1, the pitch in quotes. The product stays the product."
+        }
+      ]
+    },
+    {
+      "id": "animate-still",
+      "title": "Animate a still (image-to-video)",
+      "credits": "300 credits for 5 s on seedance-2.0 at 720p (same rate as text mode)",
+      "steps": [
+        {
+          "tool": "generate_image",
+          "text": "The still: a portrait, a product shot, a scene. Or upload_image a photo the user has."
+        },
+        {
+          "tool": "generate_video",
+          "text": "That URL as first_frame; the prompt says what moves and what is said. Leave aspect out (adaptive follows the frame). No refs in this call: frames and refs cannot be mixed on Seedance."
+        },
+        {
+          "tool": "get_run_status",
+          "text": "Poll until completed. The clip opens on the exact still."
+        }
+      ]
+    },
+    {
+      "id": "first-last-frame",
+      "title": "First and last frame",
+      "credits": "300 credits for 5 s on seedance-2.0 at 720p; two stills first (20 credits each with generate_image)",
+      "steps": [
+        {
+          "tool": "generate_image",
+          "text": "Twice: the opening still and the closing still, same person and setting wording, a different pose or state."
+        },
+        {
+          "tool": "generate_video",
+          "text": "first_frame = the opening still, last_frame = the closing still; the prompt describes the move between them. The model animates from one to the other."
+        }
+      ]
+    },
+    {
+      "id": "match-motion",
+      "title": "Match a reference clip's motion (video_refs)",
+      "credits": "600 credits for a 5 s clip plus a 5 s reference clip on seedance-2.0 at 720p: the reference clip's seconds are billed at the same per-second rate",
+      "steps": [
+        {
+          "tool": "quote",
+          "text": "With video_refs the quote adds the reference clip seconds at the same rate (measured at submit); price it first."
+        },
+        {
+          "tool": "generate_video",
+          "text": "The clip in video_refs (https mp4/mov), a portrait in refs, and a prompt like \"@image1 performs the same move as @video1, in a bright kitchen ...\". Describe the NEW clip; never write edit or extend wording."
+        },
+        {
+          "tool": "get_run_status",
+          "text": "Poll until completed."
+        }
+      ]
+    },
+    {
+      "id": "crazy-look",
+      "title": "Crazy look (silent reaction clip)",
+      "credits": "300 credits per 5 s clip at 720p",
+      "steps": [
+        {
+          "tool": "generate_video",
+          "text": "\"Extreme close-up, face fills the frame, one exaggerated bug-eyed shock held straight into the lens, slow lean-in, no speech\"; audio: false; seconds: 5; a portrait in refs (@image1) so it is the same face every time."
+        },
+        {
+          "tool": null,
+          "text": "Burn the caption in the editor, or ask for a static caption in the prompt. Volume: same prompt + same refs, N calls, N performances."
+        }
+      ]
+    },
+    {
+      "id": "voiceover",
+      "title": "B-roll with voiceover",
+      "credits": "1 credit per 100 characters",
+      "steps": [
+        {
+          "tool": "generate_audio",
+          "text": "The narration, a named voice, a tone."
+        },
+        {
+          "tool": null,
+          "text": "For a finished narrated b-roll UGC video, pass the narration as script and the footage as broll_url to make_ugc, after quote_ugc. For direct generate_audio output, the mp3 URL also works as an audio_refs entry for generate_video."
+        }
+      ]
+    },
+    {
+      "id": "series",
+      "title": "A series with one face",
+      "credits": "20 credits once, then 300 per 5 s clip at 720p",
+      "steps": [
+        {
+          "tool": "generate_image",
+          "text": "Once: a clean head-and-shoulders portrait."
+        },
+        {
+          "tool": "generate_video",
+          "text": "Every clip: the same portrait URL in refs as @image1, the same person/setting wording, a different script. The reference is what keeps the face."
+        },
+        {
+          "tool": "list_characters",
+          "text": "Saved characters from the dashboard appear here; their character_sheet_url works the same way in refs."
+        }
+      ]
+    },
+    {
+      "id": "two-people",
+      "title": "Two people",
+      "credits": "300 to 900 credits per exchange at 720p",
+      "steps": [
+        {
+          "tool": "generate_video",
+          "text": "Both portraits in refs and a prompt that names who says what: \"@image1 and @image2 on a couch. @image1 says: ... @image2 laughs and says: ...\". Keep it to 10 to 15 s per exchange."
+        }
+      ]
+    },
+    {
+      "id": "hero",
+      "title": "The hero clip",
+      "credits": "about 0.9x the credits at 480p (28 credits/s at 480p, 60 at 720p, 150 at 1080p)",
+      "steps": [
+        {
+          "tool": "quote",
+          "text": "Price it first: model \"seedance-2.5\", seconds up to 10, the quality the user asked for."
+        },
+        {
+          "tool": "generate_video",
+          "text": "One take, a strong reference. In image mode leave aspect out (adaptive only). Expect a much longer render than seedance-2.0 (12 to 25 minutes per clip; plan the wait)."
+        }
+      ]
+    }
+  ],
+  "prompting": {
+    "intro": "On the loose surface the prompt is yours, so the realism work the fixed pipelines did server-side is now in your hands. This is what they injected, and how to use it.",
+    "rubric": "Critical realism rules (must all be visible in the frame):\n- skin shows pores, oil sheen on T-zone, baby hairs at hairline, slight under-eye softness;\n- single mixed light source (soft window daylight + warm interior bulb), realistic shadows;\n- stable iPhone-like framing by default (no noticeable shake/drift), with slight off-axis angle (about 5-12 degrees) and imperfect centering;\n- 9:16 vertical, looks like raw iPhone footage, NOT a studio shot;\n- NO plastic AI sheen, NO uncanny symmetry, NO ultra-smoothed skin;\n- NO shiny/plastic face, NO glowing light on the face, NO beauty-filter glow;\n- subtle asymmetry: head tilt, blink, micro-expressions;\n- hands are always doing something, gesturing, holding a product, adjusting clothing, or otherwise occupied (never limp at the sides);\n- mouth caught mid-syllable when talking, not closed and not open-smile;\n- eyes slightly off-center to camera, not a dead stare;\n- no visible phone, selfie-stick, or outstretched selfie arm unless explicitly requested.",
+    "rules": [
+      "Write the shot as prose, not tags. The models read sentences better than keyword lists.",
+      "Order: who (age, look), where (setting, light), what they do with their hands, camera (phone framing, slight off-axis), the spoken words in quotes.",
+      "Pick 4 to 6 rubric lines that matter for THIS shot and fold them in naturally: \"natural skin texture, soft window light, slight head tilt, hands busy with the bottle\".",
+      "For a series, keep the wording of the person and setting identical across calls and pass the same refs.",
+      "With references, name them: @image1 is the person, @image2 the product, @video1 the move to copy, @audio1 the voice. Numbering is per list, from 1.",
+      "With a first frame, describe the motion, not the frame: the frame already sets who and where. Say what changes between the first and the last frame.",
+      "Never put edit or extend wording (\"edit the video\", \"remove\", \"replace\", \"extend\", \"continue\") in a prompt that carries video_refs. Describe the new clip.",
+      "Do not say \"selfie\" or \"phone\" unless a phone should be in the frame; say \"talking to camera\".",
+      "Speech: quote the words verbatim; about 2.3 words per second. 5 s is 10 to 12 words, 10 s is 20 to 25, 15 s is 30 to 35."
+    ],
+    "examples": [
+      {
+        "title": "Talking head, 5 s, seedance-2.0, text mode",
+        "tool": "generate_video",
+        "prompt": "A 28-year-old woman in a bright apartment kitchen, phone-camera framing slightly off-axis, natural skin texture with a little T-zone sheen, soft window daylight from the left and a warm lamp behind her. She holds a small amber serum bottle up near her cheek, tilts her head and says: \"Okay. I did not expect this to actually work.\" Eyes just off the lens, mouth caught mid-word."
+      },
+      {
+        "title": "Product frame, with the product photo in refs",
+        "tool": "generate_image",
+        "prompt": "The same woman holding THIS bottle (from the reference) up to the lens with both hands, label facing camera, bedroom corner, soft window light, phone photo, natural skin, no beauty-filter glow."
+      },
+      {
+        "title": "Reference mode, a portrait and a product",
+        "tool": "generate_video",
+        "prompt": "@image1 sits at a kitchen counter, phone-camera framing, holds @image2 up to the lens with the label facing camera and says: \"This is the one I kept coming back to.\" Natural skin, soft window light, a slight lean-in on the last word."
+      },
+      {
+        "title": "Image-to-video, from a still",
+        "tool": "generate_video",
+        "prompt": "The woman in the frame lowers the bottle, looks straight into the lens and says: \"Told you.\" Handheld drift, the window light stays where it is, nothing else in the room moves."
+      }
+    ]
+  },
+  "rubric": "Critical realism rules (must all be visible in the frame):\n- skin shows pores, oil sheen on T-zone, baby hairs at hairline, slight under-eye softness;\n- single mixed light source (soft window daylight + warm interior bulb), realistic shadows;\n- stable iPhone-like framing by default (no noticeable shake/drift), with slight off-axis angle (about 5-12 degrees) and imperfect centering;\n- 9:16 vertical, looks like raw iPhone footage, NOT a studio shot;\n- NO plastic AI sheen, NO uncanny symmetry, NO ultra-smoothed skin;\n- NO shiny/plastic face, NO glowing light on the face, NO beauty-filter glow;\n- subtle asymmetry: head tilt, blink, micro-expressions;\n- hands are always doing something, gesturing, holding a product, adjusting clothing, or otherwise occupied (never limp at the sides);\n- mouth caught mid-syllable when talking, not closed and not open-smile;\n- eyes slightly off-center to camera, not a dead stare;\n- no visible phone, selfie-stick, or outstretched selfie arm unless explicitly requested."
+}

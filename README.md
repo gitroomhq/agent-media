@@ -1,73 +1,120 @@
-# agent-media — Claude Skill plugin
+# agent-media
 
-[![npm — mcp-server](https://img.shields.io/npm/v/%40agentmedia%2Fmcp-server?label=%40agentmedia%2Fmcp-server)](https://www.npmjs.com/package/@agentmedia/mcp-server)
-[![npm — CLI](https://img.shields.io/npm/v/agent-media-cli?label=agent-media-cli)](https://www.npmjs.com/package/agent-media-cli)
+[![npm, mcp-server](https://img.shields.io/npm/v/%40agentmedia%2Fmcp-server?label=%40agentmedia%2Fmcp-server)](https://www.npmjs.com/package/@agentmedia/mcp-server)
+[![npm, CLI](https://img.shields.io/npm/v/agent-media-cli?label=agent-media-cli)](https://www.npmjs.com/package/agent-media-cli)
 [![Claude plugin](https://img.shields.io/badge/claude-%2Fplugin%20install-A78BFA)](https://github.com/gitroomhq/agent-media)
+[![Cursor plugin](https://img.shields.io/badge/cursor-plugin-A78BFA)](https://cursor.com/marketplace)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
-**Agents: read this whole page. It is everything you need to create UGC videos with agent-media — no other docs required.**
+Public documentation: [docs.agent-media.ai](https://docs.agent-media.ai). Setup, uploads, models, billing, troubleshooting and self-hosting.
 
-agent-media turns a short description (or a photo) + a script into a finished, captioned, lip-synced vertical UGC video. Works in Claude Code, Cursor, or any MCP / HTTP agent. One Bearer token authenticates everything.
+**Agents: read this page, then [skills/agent-media/SKILL.md](skills/agent-media/SKILL.md). That is everything.**
 
-## 1. Connect (pick one)
+agent-media gives agents one connection to upload and inspect references, generate or edit images, build storyboards and frames, generate video and voice, reuse characters, quote, track and compose results. Agents choose models, modes, references and intermediate assets, or use `make_ugc` as an optional shortcut when its complete vertical-video contract fits. Every path has a no-charge quote and ends with `get_run_status`. Works in Claude Code, Claude.ai, Cursor, Codex, Grok, or any MCP / HTTP agent.
 
-- **One-liner (recommended):** `npx skills add gitroomhq/agent-media` — installs all of agent-media's skills into your agent (Claude Code, Cursor, etc.).
-- **Claude Code plugin (skills + MCP tools):** inside a Claude Code session run `/plugin marketplace add gitroomhq/agent-media` then `/plugin install agent-media@agent-media`.
-- **Any MCP agent:** run the MCP server `npx -y -p @agentmedia/mcp-server@latest agent-media-mcp` with env `AGENT_MEDIA_API_KEY=ma_...`. All skills self-describe via `tools/list`.
-- **Plain HTTP:** call the REST API directly (below).
+## 1. Connect, no API key needed
+
+```
+https://api.agent-media.ai/mcp
+```
+
+The hosted connector speaks OAuth 2.1 with dynamic client registration: your agent registers itself, opens a sign-in page, and gets a token. Nothing to copy.
+
+**Paste this to your agent and it sets itself up:**
+
+```text
+Set up agent-media for me so I can generate videos, images and voice from here.
+1. Add the agent-media MCP server: https://api.agent-media.ai/mcp (Streamable HTTP).
+2. Authenticate: complete the sign-in in the browser it opens.
+3. Install the companion skill: run `npx skills add gitroomhq/agent-media`.
+Once that's done, call list_models and tell me what you can make.
+```
+
+Other routes: **Claude.ai / Desktop**: Customize > Connectors > + > Add custom connector > paste the URL > Connect and sign in. **Claude Code**: `claude mcp add --transport http --scope user agent-media https://api.agent-media.ai/mcp`. **Codex**: `codex mcp add agent-media --url https://api.agent-media.ai/mcp`. **Grok**: `grok mcp add agent-media -t http https://api.agent-media.ai/mcp`. **Claude Code plugin**: `/plugin marketplace add gitroomhq/agent-media` then `/plugin install agent-media@agent-media`. **Cursor plugin**: Settings > Plugins > search Agent Media > Install, or `/add-plugin agent-media` in chat; the plugin ships this skill plus the hosted MCP server, and Cursor opens the sign-in for you.
+
+Claude Code: after adding the server, run `/mcp`, select agent-media, and sign in. The command above uses user scope, so it works across projects. Codex: run `codex mcp login agent-media`. If Agent Media is already connected through a plugin or connector, use that connection instead of installing a duplicate.
+
+Check setup without spending credits: call `get_account` (or `list_models` for a cached catalog), then open the existing image upload panel (`open_upload_panel` when listed, otherwise `upload_image` with `{}`). Use the account check for credit balance; opening the panel checks upload access separately. Ask for a quote before the first generation.
 
 ## 2. Auth
 
-Get a Bearer token: `npm i -g agent-media-cli && agent-media login` (stores it at `~/.agent-media/credentials.json`), or grab the `ma_*` token from the dashboard. Every call uses `Authorization: Bearer ma_...`. You need credits on the account (buy at agent-media.ai).
+OAuth (above) is the default and needs no key. You need credits on the account, buy at agent-media.ai. 100 credits = 1 USD.
 
-## 3. Make a video — `make_ugc` (the one tool)
+**API keys** remain supported for CI, scripts, and the local stdio server (`npx @agentmedia/mcp-server`): get one with `npm i -g agent-media-cli && agent-media login` or from the dashboard, then send `Authorization: Bearer ma_...`, including to the same hosted URL above.
 
-`make_ugc` is the only generation tool: give it a `script` + a person/image/character and it returns the finished captioned video. Short script → one clip; long monologue → seamless multi-take (never trimmed); add `broll_url` → narrated overlay.
+## 3. The tools
 
-```bash
-curl -X POST https://api.agent-media.ai/v1/skills/make_ugc/run \
-  -H "Authorization: Bearer ma_..." -H "Content-Type: application/json" \
-  -d '{ "script": "Okay, this changed my whole morning routine — you have to try it.",
-        "person": "a friendly 28-year-old woman, soft daylight" }'
-#   (captions are opt-in — add "captions": true only if the user asked for them)
-# -> 202 { "skill_run_id": "..." }   then poll:
-curl https://api.agent-media.ai/v1/skills/runs/<skill_run_id> -H "Authorization: Bearer ma_..."
-# when status == "succeeded", final_output.video_url is your MP4.
+| Tool | What it does | Credits |
+|---|---|---|
+| `make_ugc` | Optional shortcut: full script plus an optional person photo, product photo, saved character or b-roll; returns one finished vertical video. Captions are opt-in. | Exact cost from `quote_ugc` |
+| `quote_ugc` | Price the exact `make_ugc` input and check spendable balance without starting a run. | 0 |
+| `generate_video` | A clip from your prompt on the model you pick, in one of three modes: text (prompt only), image-to-video (`first_frame`, optional `last_frame`) or reference (`refs`, `video_refs`, `audio_refs`, addressed as @image1 @video1 @audio1). Native speech when the words are in the prompt. | seconds x the per-second rate at the chosen quality (seedance-2.0: 30 credits/s at 480p, 60 at 720p, 150 at 1080p; seedance-2.5: 28 credits/s at 480p, 60 at 720p, 150 at 1080p); reference clip seconds are billed like output seconds |
+| `generate_image` | One image from your prompt; with refs it edits/composes from them. The way to build a portrait, a product frame or a first frame for a video. | 20 per image |
+| `generate_audio` | Text to speech in a named voice. For voiceover over b-roll, or an audio reference for a clip; a talking head does not need it. | 1 per 100 characters |
+| `get_account` | Authenticated connection and credit balance, with the next step. No billing changes. | 0 |
+| `quote` | The price of any of the above without running it. | 0 |
+| `list_models` | The catalog: modes, limits, prices per quality, what each model is good and bad at, how to select it, recent results. | 0 |
+| `list_characters` | Saved characters (sheet + portrait URLs) to pass as `refs`. | 0 |
+| `get_run_status` | Poll a job id until it is done; returns the URL. | 0 |
+| `upload_image` | An already accessible file, bytes, or a foreign URL in; an https URL out. Prefer the panel for user uploads when available. | 0 |
+| `open_upload_panel`, `get_uploads` (when available) | Let the user drag and drop images, then retrieve ready URLs. Images expire after 24 hours. | 0 |
+| `rate_run` | Say what you thought of a finished run, 1 to 5 plus a note. Feeds the per-model stats and `model:"auto"`. | 0 |
+
+## User-provided images
+
+Before the first generation, call get_account to confirm this connection and read available credits. If get_account is absent from a cached tool catalog, list_models includes the same account check. Then call the matching quote tool with the intended inputs: quote_ugc for make_ugc, or quote for generate_image, generate_video and generate_audio. Compare the quoted credits to the available balance before submitting. A public model catalog or an upload alone does not prove credit readiness. If the balance check is unavailable, retry it; do not assume zero credits or ask the user to pay again. A balance snapshot does not reserve credits or guarantee provider availability. Upload-only requests do not need generation credits.
+When the user wants to provide a product photo, portrait, screenshot, or image reference, check tools/list. If open_upload_panel is available, offer it first: call open_upload_panel with {}, show its inline panel or returned browser link, and wait for the user to finish. Then call get_uploads with the returned session_id and use the exact ready image_url in refs, first_frame, last_frame, or the matching skill image field. Do not start a reference-dependent generation until the required images are ready. The panel accepts still PNG, JPEG, and WebP, up to 10 images and 25 MB each. Images expire 24 hours after the panel is created; show the returned expiry, request a new upload if expired, and never make a permanent copy. Uploading uses no generation credits. Do not ask the user for base64, shell commands, or a public hosting service; do not continuously poll while waiting for them. Only call these tool names when discovered. If they are missing from the connected tool catalog, call upload_image with {} to open the same panel; use the returned panel: upload_key with upload_image to retrieve images after the user finishes. If that reports the panel is unavailable, use upload_image only for an already accessible file or URL. Do not build an upload page or request a local folder as a substitute for the existing panel. Never invent access to a chat attachment: if you cannot read it, explain that and offer the panel when available. Browser fallback works without inline UI support; do not promise an inline panel in every client.
+Inspect the native image previews returned with retrieved uploads before describing them or writing image-specific prompts. Never infer what the image shows from an email domain, account metadata, or filename. Use the original URLs for generation, not preview bytes. If the session ID was lost, call get_uploads with {} to list recent sessions, or upload_image with {"upload_key":"panel:recent"} for cached catalogs; retrieve the matching session before asking for re-upload. Account-wide recent uploads may belong to other conversations, so clarify ambiguous selection. Uploading stores an image; it does not attach it to a generation automatically. If the user already requested a generation with these images, continue that request using the returned URLs; do not stop at "upload complete" or ask again whether to use them. If make_ugc fits the requested outcome, pass a person photo as image or a product photo as product_image, then call quote_ugc before spending. Otherwise compose the direct generators: for generate_image, put the relevant image_url values in refs; for generate_video, use refs for product/person/appearance references, or first_frame for animating a still (last_frame only for an explicitly requested ending frame), and never combine refs with frame fields. Preserve the user's intended image roles and model limits; ask only if the role or selection is unclear. Include the URL in the tool arguments, not only in the prompt. Do not substitute a newly generated image for the uploaded reference. If the request was upload-only, report readiness and wait for a generation request; uploading alone does not authorize spending credits. After submitting, poll get_run_status and return the result.
+
+## 4. Ten-second tour
+
+```text
+quote_ugc { "script": "Okay, I did not expect this to actually work.", "person": "A 28-year-old woman in a bright kitchen" }
+-> exact credits and spendable balance; nothing rendered
+make_ugc { "script": "Okay, I did not expect this to actually work.", "person": "A 28-year-old woman in a bright kitchen" }
+-> skill_run_id ...
+get_run_status { "run_id": "...", "wait": true }   (repeat until completed)
+-> Video: https://.../video.mp4
 ```
 
-In Claude/Cursor you just say it in words: *"Make a UGC video of a friendly woman saying '…' with TikTok captions."* — the agent calls the one tool, `make_ugc`.
+Same face across a series: `generate_image` a portrait once, then pass that URL in `refs` on every `generate_video` and call it @image1 in the prompt. Product in hand: pass the product photo (via `upload_image`) in `refs` and say where it is. Animate a still: pass it as `first_frame` (and a `last_frame` to say where the motion ends). Follow a clip's motion: pass it in `video_refs` and describe the new clip as @video1. Frames and refs cannot be mixed on Seedance: one or the other per call.
 
-## 4. Calling it (REST / MCP / CLI)
+## 5. Models
 
-- **REST:** `POST https://api.agent-media.ai/v1/skills/make_ugc/run` (Bearer auth, JSON body) → `202` with a `skill_run_id`.
-- **Poll:** `GET /v1/skills/runs/<skill_run_id>` → `final_output.video_url` when `status` is `succeeded`.
-- **MCP:** call the `make_ugc` tool; arguments = its input fields.
-- **Exact input schema (always current):** `GET https://api.agent-media.ai/v1/public/skills` or MCP `tools/list`. Trust that over any hand-written list.
+| Model | Kind | Price | Modes and limits | Best for |
+|---|---|---|---|---|
+| `seedance-2.0` (default) | video | 30 credits/s at 480p, 60 at 720p, 150 at 1080p | text (prompt only): 4 to 15 s, default aspect 9:16, 480p/720p/1080p; image-to-video (first_frame + optional last_frame): 4 to 15 s, default aspect adaptive, 480p/720p/1080p; reference (refs / video_refs / audio_refs, up to 9 images, 3 clips, 15 s total, 3 audio, 15 s total, not alone): 4 to 15 s, default aspect 9:16, 480p/720p/1080p | talking-head UGC; product in hands |
+| `seedance-2.5` | video | 28 credits/s at 480p, 60 at 720p, 150 at 1080p | text (prompt only): 4 to 30 s, default aspect 9:16, 480p/720p/1080p; image-to-video (first_frame + optional last_frame): 4 to 30 s, aspect adaptive only, 480p/720p/1080p; reference (refs / video_refs / audio_refs, up to 30 images, 10 clips, 30 s total, 10 audio, 30 s total): 4 to 30 s, default aspect 9:16, 480p/720p/1080p | hero product ads; close-up faces |
+| `gpt-image-2.5` (default) | image | 20 credits per image | 1024x1024, 1024x1536, 1536x1024; refs up to 4 | portraits and character sheets that a video has to keep; the first frame of a clip |
+| `gpt-image-2.5-flare` | image | 20 credits per image | 1024x1024, 1024x1536, 1536x1024; refs up to 4 | variants and drafts at the same quality tier; batches of frames |
+| `gpt-image-2` | image | 20 credits per image | 1024x1024, 1024x1536, 1536x1024; refs up to 4 | the previous generation, kept selectable for runs that were built on it |
+| `elevenlabs-tts` (default) | audio | 1 credit per 100 characters | up to 4000 characters per call | voiceover on b-roll; narration |
 
-## Skills
+Full guide with the avoid-for column, the per-mode table and one page per model: [reference/models.md](reference/models.md). Planned models are listed there too, they cannot be selected until a real run is recorded. `list_models` also carries `recent`: the last 30 days of real runs per model (fail rate, auto-judge score, user ratings, typical render time); pass `model: "auto"` and the printed policy picks from those numbers.
 
-- `make_podcast` (v1.0.0) — Two saved characters recording a podcast in ONE room — the camera cuts to whoever is speaking, and each actor stays in their IDENTICAL seat, desk and mic position across every cut. Provide character_a and character_b (saved char_… ids from list_characters, or https image URLs) and an ordered `script` of A/B dialogue turns (each { speaker: "A" | "B", line: "…" }). The pipeline renders ONE shared two-shot, locks a close-up per actor, animates every turn with native lip-synced Seedance voice (each actor keeps a consistent look AND voice across the whole episode), and hard-cuts the turns together as a 9:16 vertical video. Long turns auto-split into ≤15s takes. Captions are OPT-IN — ask the user first, then set subtitles:true.
-- `make_ugc` (v1.0.0) — The ONE tool for UGC video. Give a `script` (any length) and optionally a `person` description, an `image` (photo), or a `character` (saved char_… or sheet URL); it returns the finished vertical video. Short script → one clip; long monologue → full multi-take (never trimmed); pass `broll_url` → narrated b-roll overlay. Captions are OPT-IN — ASK the user if they want them (and which style) before generating; set `captions:true` only if they say yes. You never pick a sub-tool.
+## 6. REST
 
-Rules: give `make_ugc` the full `script` (any length — it is never trimmed) or a `scene_action` for a silent clip; pass `person`, `image` (https or base64), or `character` (a `char_…` id / sheet URL) for identity, or none for a default person; captions are OFF unless you set them — ASK the user if they want captions and which style first, never add them unprompted. Each run costs credits (see the cost in the skill). Reuse a saved character by passing its `character` on the next call — no re-generation. The other primitives (portrait, character sheet, lip-sync from your own audio, captioning an external video, etc.) stay available over REST/MCP for advanced use.
+- `POST https://api.agent-media.ai/v2/generate/{video|image|audio}` (Bearer, JSON body = the tool arguments) returns `201 { job_id, credits_deducted, status_url }`
+- `POST https://api.agent-media.ai/v2/quote/{video|image|audio}` returns `{ credits, usd, model, breakdown }`
+- `GET https://api.agent-media.ai/v1/videos/{job_id}` returns `{ status, video_url }` (the URL is an image or mp3 for those kinds)
+- `GET https://api.agent-media.ai/v1/models` returns the catalog, public
+- Exact input schemas: MCP `tools/list`, or [reference/tools.md](reference/tools.md). Trust those over any hand-written list.
 
 ## Publish to social
 
-Post a generated video to the user's TikTok / Instagram / X — via REST, the CLI, or MCP tools:
-- `POST /v1/social/connect { provider }` → returns an OAuth `url` the user opens to authorize (agents can't OAuth for them). CLI: `agent-media social connect x`. MCP: `social_connect`.
-- `GET /v1/social/channels` → the user's connected channels `[{ id, name, provider, profile }]`. CLI: `agent-media social channels`. MCP: `social_channels`.
-- `POST /v1/social/publish { video_url, channel_ids, caption, type:"now"|"schedule", date? }` → re-hosts the R2 video on the network and posts/schedules it; returns `{ success, media_id, post_ids }`. CLI: `agent-media social publish`. MCP: `social_publish`.
-
-See `skills/publish-to-social/SKILL.md` for the full flow.
+Post a generated video to the user's TikTok / Instagram / X via `POST /v1/social/*`, see [skills/publish-to-social/SKILL.md](skills/publish-to-social/SKILL.md).
 
 ## Reference docs
 
-- [reference/auth.md](reference/auth.md) — first-time setup
-- [reference/pacing.md](reference/pacing.md) — the 2–4 words-per-second script rule
-- [reference/realism-rubric.md](reference/realism-rubric.md) — realism props baked into every prompt
+- [skills/agent-media/SKILL.md](skills/agent-media/SKILL.md), the skill: modes, prompting, recipes, rules
+- [reference/models.md](reference/models.md), which model for what, with the per-mode limits and prices
+- [reference/prompting.md](reference/prompting.md), how to write a prompt that comes out real
+- [reference/recipes.md](reference/recipes.md), talking head, product in hand, animate a still, first and last frame, match a reference clip, crazy look, b-roll voiceover, series
+- [reference/tools.md](reference/tools.md), every tool with its exact input schema
+- [reference/auth.md](reference/auth.md), first-time setup
 
 ## How this repo is built
 
-This repo is generated. The source of truth is the agent-media private monorepo. A GitHub Action mirrors the `public-skill/` subtree here on every push. Do not commit hand-edits — they will be overwritten.
+This directory is generated from the agent-media monorepo (`pnpm --filter api-v2 gen:public-skill`); CI fails if it drifts from the code. Do not hand-edit.
 
 License: Apache-2.0.
