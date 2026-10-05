@@ -24,15 +24,5 @@
     "seedance",
     "video-generation",
     "agent-media"
-  ],
-  "categories": [
-    "video",
-    "media",
-    "ai-creative"
-  ],
-  "api": {
-    "rest": "https://api.agent-media.ai",
-    "openapi": "https://api.agent-media.ai/openapi.json",
-    "mcp": "https://api.agent-media.ai/mcp"
-  }
+  ]
 }
