@@ -1,5 +1,8 @@
 # agent-media
 
+> [!IMPORTANT]
+> **This repository has moved to [agent-media-ai/agent-media](https://github.com/agent-media-ai/agent-media).** This copy is archived and no longer updated. Install the plugin, CLI and MCP server from the new repository, or go to [agent-media.ai](https://agent-media.ai).
+
 [![npm, mcp-server](https://img.shields.io/npm/v/%40agentmedia%2Fmcp-server?label=%40agentmedia%2Fmcp-server)](https://www.npmjs.com/package/@agentmedia/mcp-server)
 [![npm, CLI](https://img.shields.io/npm/v/agent-media-cli?label=agent-media-cli)](https://www.npmjs.com/package/agent-media-cli)
 [![Claude plugin](https://img.shields.io/badge/claude-%2Fplugin%20install-A78BFA)](https://github.com/gitroomhq/agent-media)
